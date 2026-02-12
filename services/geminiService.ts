@@ -1,28 +1,32 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// We initialize inside functions to ensure the most up-to-date API key 
-// (especially when using the BYOK dialog window.aistudio.openSelectKey or manual entry)
 const getClient = () => {
   const manualKey = localStorage.getItem('steno_manual_key');
-  const apiKey = manualKey || process.env.API_KEY;
+  // Use process.env.API_KEY as the fallback as per standard SDK instructions
+  const apiKey = manualKey || (typeof process !== 'undefined' ? process.env.API_KEY : undefined);
+  
+  if (!apiKey) {
+    throw new Error("API_KEY_MISSING");
+  }
+  
   return new GoogleGenAI({ apiKey: apiKey });
 };
 
 export async function askResearchQuestion(question: string, context: string = "") {
-  const ai = getClient();
-  const prompt = `
-    I am working on a project. 
-    Current context of my project: "${context}"
-    
-    Question: "${question}"
-    
-    Please provide a concise, factual, and helpful answer for my research. 
-    Use the search tool to verify facts.
-    Keep the response focused on helping me advance my project.
-  `;
-
   try {
+    const ai = getClient();
+    const prompt = `
+      I am working on a project. 
+      Current context of my project: "${context}"
+      
+      Question: "${question}"
+      
+      Please provide a concise, factual, and helpful answer for my research. 
+      Use the search tool to verify facts.
+      Keep the response focused on helping me advance my project.
+    `;
+
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: prompt,
@@ -38,7 +42,7 @@ export async function askResearchQuestion(question: string, context: string = ""
 
     return { text, urls };
   } catch (error: any) {
-    if (error.message?.includes("Requested entity was not found") || error.message?.includes("API_KEY_INVALID")) {
+    if (error.message === "API_KEY_MISSING" || error.message?.includes("Requested entity was not found") || error.message?.includes("API_KEY_INVALID")) {
       throw new Error("KEY_RESET_REQUIRED");
     }
     console.error("Gemini API Error:", error);
@@ -47,9 +51,8 @@ export async function askResearchQuestion(question: string, context: string = ""
 }
 
 export async function generateProjectImage(prompt: string) {
-  const ai = getClient();
   try {
-    // High-quality generation using Gemini 3 Pro Image
+    const ai = getClient();
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-image-preview',
       contents: {
@@ -60,7 +63,7 @@ export async function generateProjectImage(prompt: string) {
           aspectRatio: "1:1",
           imageSize: "1K"
         },
-        tools: [{ googleSearch: {} }] // Pro image model supports web search for better accuracy
+        tools: [{ googleSearch: {} }] 
       }
     });
 
@@ -71,7 +74,7 @@ export async function generateProjectImage(prompt: string) {
     }
     throw new Error("No image data returned");
   } catch (error: any) {
-    if (error.message?.includes("Requested entity was not found") || error.message?.includes("API_KEY_INVALID")) {
+    if (error.message === "API_KEY_MISSING" || error.message?.includes("Requested entity was not found") || error.message?.includes("API_KEY_INVALID")) {
       throw new Error("KEY_RESET_REQUIRED");
     }
     console.error("Image Generation Error:", error);
@@ -80,30 +83,29 @@ export async function generateProjectImage(prompt: string) {
 }
 
 export async function weaveProjectOutline(notepadNotes: {content: string, timestamp: number}[], researchNotes: string[]) {
-  const ai = getClient();
-  const sortedNotes = [...notepadNotes].sort((a, b) => b.timestamp - a.timestamp);
-  
-  const prompt = `
-    TASK: Construct a comprehensive, structured outline for a project/novel.
-    
-    INPUT 1: BRAINSTORMING NOTES (Ordered newest to oldest)
-    ---
-    ${sortedNotes.map(n => `[Entry Date: ${new Date(n.timestamp).toLocaleString()}]\n${n.content}`).join('\n---\n')}
-    ---
-    
-    INPUT 2: VERIFIED RESEARCH DATA (Use this to corroborate or correct the brainstorming notes)
-    ---
-    ${researchNotes.join('\n---\n')}
-    ---
-    
-    INSTRUCTIONS:
-    1. Organize the brainstorming into a logical, hierarchical structure.
-    2. PRIORITIZE THE NEWER notes if conflicts arise.
-    3. Correct contradictions with research data and add a [CORRECTED] note.
-    4. Provide the result in a clean, readable text format.
-  `;
-
   try {
+    const ai = getClient();
+    const sortedNotes = [...notepadNotes].sort((a, b) => b.timestamp - a.timestamp);
+    
+    const prompt = `
+      TASK: Construct a comprehensive, structured outline for a project/novel.
+      
+      INPUT 1: BRAINSTORMING NOTES (Ordered newest to oldest)
+      ---
+      ${sortedNotes.map(n => `[Entry Date: ${new Date(n.timestamp).toLocaleString()}]\n${n.content}`).join('\n---\n')}
+      ---
+      
+      INPUT 2: VERIFIED RESEARCH DATA
+      ---
+      ${researchNotes.join('\n---\n')}
+      ---
+      
+      INSTRUCTIONS:
+      1. Organize the brainstorming into a logical, hierarchical structure.
+      2. PRIORITIZE THE NEWER notes.
+      3. Provide result in clean text format.
+    `;
+
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: prompt,
@@ -115,7 +117,7 @@ export async function weaveProjectOutline(notepadNotes: {content: string, timest
 
     return { text: response.text || "The loom failed to weave a structure." };
   } catch (error: any) {
-    if (error.message?.includes("Requested entity was not found") || error.message?.includes("API_KEY_INVALID")) {
+    if (error.message === "API_KEY_MISSING" || error.message?.includes("Requested entity was not found") || error.message?.includes("API_KEY_INVALID")) {
       throw new Error("KEY_RESET_REQUIRED");
     }
     console.error("Outline Weave Error:", error);

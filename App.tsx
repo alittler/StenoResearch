@@ -35,17 +35,19 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<ProjectNote[][]>([]);
   const [historyPointer, setHistoryPointer] = useState(-1);
 
-  // Check for API key on mount
+  // Check for API key on mount and session refresh
   useEffect(() => {
     const checkKey = async () => {
       const aistudio = (window as any).aistudio;
       const manualKey = localStorage.getItem(MANUAL_KEY_STORAGE);
-      const effectiveKey = manualKey || process.env.API_KEY;
+      const envKey = typeof process !== 'undefined' ? process.env.API_KEY : undefined;
+      const effectiveKey = manualKey || envKey;
 
-      if (aistudio) {
+      if (aistudio && typeof aistudio.hasSelectedApiKey === 'function') {
         setIsAIStudio(true);
         const selected = await aistudio.hasSelectedApiKey();
-        setHasApiKey(selected);
+        // If they haven't selected a platform key, but have a manual one, that's fine too
+        setHasApiKey(selected || !!manualKey);
       } else {
         setIsAIStudio(false);
         setHasApiKey(!!effectiveKey); 
@@ -56,9 +58,10 @@ const App: React.FC = () => {
 
   const handleOpenKeySelector = async () => {
     const aistudio = (window as any).aistudio;
-    if (aistudio) {
+    if (aistudio && typeof aistudio.openSelectKey === 'function') {
       await aistudio.openSelectKey();
       setHasApiKey(true); 
+      setSessionKey(prev => prev + 1);
     }
   };
 
@@ -234,51 +237,61 @@ const App: React.FC = () => {
   return (
     <div key={sessionKey} className="flex flex-col min-h-screen bg-stone-100 text-stone-900 selection:bg-stone-300 selection:text-stone-900">
       {!hasApiKey && (
-        <div className="fixed inset-0 z-[100] bg-stone-950/90 backdrop-blur-sm flex items-center justify-center p-6 text-center">
-          <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md space-y-6">
-            <div className="text-5xl">🔑</div>
-            <h2 className="text-2xl font-bold font-mono uppercase">API Key Required</h2>
+        <div className="fixed inset-0 z-[100] bg-stone-950/90 backdrop-blur-md flex items-center justify-center p-6 text-center">
+          <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-lg space-y-6 border border-stone-200">
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-inner">🗝️</div>
+              <h2 className="text-2xl font-bold font-mono uppercase tracking-tight">Gemini API Key</h2>
+            </div>
+            
             <p className="text-stone-500 text-sm font-mono leading-relaxed">
-              {isAIStudio 
-                ? "To use research and visualization features, select a paid API key from your project."
-                : "Enter your Gemini API Key to enable research and visuals. It will be stored locally in your browser."}
+              To enable AI research, outlines, and image generation, please provide a Gemini API Key. It will be stored safely in your browser's local storage.
             </p>
             
             <div className="space-y-4 pt-4">
-              {isAIStudio ? (
+              <div className="space-y-3">
+                <input 
+                  type="password"
+                  value={tempKey}
+                  onChange={(e) => setTempKey(e.target.value)}
+                  placeholder="Type or Paste API Key here..."
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-4 font-mono text-sm focus:ring-2 focus:ring-stone-900 outline-none text-center"
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveManualKey()}
+                  autoFocus
+                />
                 <button 
-                  onClick={handleOpenKeySelector}
-                  className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all"
+                  onClick={handleSaveManualKey}
+                  className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all shadow-lg active:scale-95"
                 >
-                  Select API Key
+                  Apply API Key
                 </button>
-              ) : (
-                <div className="space-y-3">
-                  <input 
-                    type="password"
-                    value={tempKey}
-                    onChange={(e) => setTempKey(e.target.value)}
-                    placeholder="AIStudio API Key..."
-                    className="w-full bg-stone-50 border-stone-200 rounded-xl px-4 py-3 font-mono text-sm focus:ring-1 focus:ring-stone-500 outline-none"
-                    onKeyDown={(e) => e.key === 'Enter' && handleSaveManualKey()}
-                  />
+              </div>
+
+              {isAIStudio && (
+                <div className="pt-2">
+                  <div className="relative mb-4">
+                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-stone-200"></div></div>
+                    <div className="relative flex justify-center text-[10px] uppercase font-bold font-mono"><span className="bg-white px-2 text-stone-400">Alternative</span></div>
+                  </div>
                   <button 
-                    onClick={handleSaveManualKey}
-                    className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all"
+                    onClick={handleOpenKeySelector}
+                    className="w-full bg-stone-100 text-stone-600 py-3 rounded-xl font-bold font-mono uppercase hover:bg-stone-200 transition-all border border-stone-200"
                   >
-                    Save Key
+                    Select Platform Key
                   </button>
                 </div>
               )}
               
-              <a 
-                href="https://aistudio.google.com/app/apikey" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block text-[10px] text-stone-400 font-mono hover:text-stone-600 underline uppercase tracking-widest"
-              >
-                Get a key from AI Studio
-              </a>
+              <div className="flex flex-col gap-2 pt-4">
+                <a 
+                  href="https://aistudio.google.com/app/apikey" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-stone-400 font-mono hover:text-stone-600 underline uppercase tracking-widest font-bold"
+                >
+                  Get a Key from Google AI Studio
+                </a>
+              </div>
             </div>
           </div>
         </div>
