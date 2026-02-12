@@ -26,17 +26,17 @@ const App: React.FC = () => {
   const [activeNotebookId, setActiveNotebookId] = useState<string>('general');
   const [activeView, setActiveView] = useState<AppView>('shelf');
   const [isInitialized, setIsInitialized] = useState(false);
-  const [hasKey, setHasKey] = useState<boolean>(true); // Assume true initially to prevent flicker
+  const [hasKey, setHasKey] = useState<boolean>(true); // Assume true to prevent initial flicker
   const [tempKey, setTempKey] = useState('');
   const [sessionNonce, setSessionNonce] = useState(0);
 
   const [history, setHistory] = useState<ProjectNote[][]>([]);
   const [historyPointer, setHistoryPointer] = useState(-1);
 
-  // Initialize Data and Key Check
+  // Initialization and Key Check
   useEffect(() => {
     const init = async () => {
-      // 1. Check for API Key
+      // 1. Strict Key Check
       const manualKey = localStorage.getItem(MANUAL_KEY_STORAGE);
       let envKey = undefined;
       try {
@@ -48,7 +48,7 @@ const App: React.FC = () => {
       const effectiveKey = manualKey || envKey;
       setHasKey(!!effectiveKey);
 
-      // 2. Load Stored Data
+      // 2. Load Data
       const savedNotes = localStorage.getItem(STORAGE_KEY_NOTES);
       const savedNotebooks = localStorage.getItem(STORAGE_KEY_NOTEBOOKS);
       
@@ -76,7 +76,7 @@ const App: React.FC = () => {
     init();
   }, [sessionNonce]);
 
-  // Persist Changes
+  // Save changes
   useEffect(() => {
     if (!isInitialized) return;
     localStorage.setItem(STORAGE_KEY_NOTES, JSON.stringify(notes));
@@ -146,7 +146,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-100 text-stone-900">
-      {/* API KEY OVERLAY */}
+      {/* KEY ENTRY SCREEN */}
       {!hasKey && (
         <div className="fixed inset-0 z-[100] bg-stone-100 flex items-center justify-center p-6">
           <div className="max-w-md w-full space-y-8 animate-in zoom-in-95 duration-300">
@@ -157,21 +157,20 @@ const App: React.FC = () => {
                 <div className="w-full h-[1px] bg-red-100"></div>
                 <div className="w-full h-[1px] bg-stone-200"></div>
               </div>
-              <h1 className="text-3xl font-mono font-bold tracking-tighter uppercase">STENO RESEARCH</h1>
-              <p className="text-stone-500 font-mono text-xs uppercase tracking-widest leading-relaxed">
-                Enter your Gemini API Key to unlock the research engine.
+              <h1 className="text-3xl font-mono font-bold tracking-tighter uppercase">UNLOCK LEDGER</h1>
+              <p className="text-stone-500 font-mono text-[10px] uppercase tracking-[0.2em] leading-relaxed">
+                Enter Gemini API Key to initialize research engine
               </p>
             </div>
 
             <div className="bg-white p-8 rounded-3xl shadow-2xl border border-stone-200 space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold font-mono text-stone-400 uppercase tracking-widest px-1">API Key Ledger</label>
                 <input 
                   type="password"
                   value={tempKey}
                   onChange={(e) => setTempKey(e.target.value)}
-                  placeholder="Paste Key Here..."
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-4 font-mono text-sm focus:ring-2 focus:ring-stone-900 outline-none transition-all text-center"
+                  placeholder="Paste your API key here..."
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-4 font-mono text-sm focus:ring-2 focus:ring-stone-900 outline-none transition-all text-center placeholder:text-stone-300"
                   onKeyDown={(e) => e.key === 'Enter' && handleSaveKey()}
                   autoFocus
                 />
@@ -179,9 +178,9 @@ const App: React.FC = () => {
               <button 
                 onClick={handleSaveKey}
                 disabled={!tempKey.trim()}
-                className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all shadow-lg active:scale-95 disabled:opacity-30"
               >
-                Unlock Ledger
+                Start Researching
               </button>
               <div className="pt-4 text-center">
                 <a 
@@ -190,7 +189,7 @@ const App: React.FC = () => {
                   rel="noopener noreferrer"
                   className="text-[10px] text-stone-400 font-mono hover:text-stone-800 underline uppercase tracking-widest font-bold"
                 >
-                  Get a Key from AI Studio
+                  Don't have a key? Get one here.
                 </a>
               </div>
             </div>
@@ -198,7 +197,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* MAIN APP UI */}
+      {/* APP UI */}
       <Navigation 
         activeView={activeView} 
         onViewChange={setActiveView} 

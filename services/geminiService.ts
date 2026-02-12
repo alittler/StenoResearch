@@ -2,15 +2,13 @@
 import { GoogleGenAI } from "@google/genai";
 
 /**
- * Robustly retrieves the API key.
- * Prioritizes manually entered keys from localStorage (for user convenience on Vercel/External),
- * then falls back to the environment variable.
+ * Retrieves the API key specifically from the manual storage location.
  */
 const getApiKey = () => {
   const manualKey = localStorage.getItem('steno_manual_key');
   if (manualKey) return manualKey;
 
-  // Safe access for various environments (Node, Vite, Webpack, etc.)
+  // Fallback for environments with pre-configured keys
   try {
     if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
       return process.env.API_KEY;
