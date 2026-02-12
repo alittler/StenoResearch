@@ -1,5 +1,5 @@
 
-export type NoteType = 'quick' | 'research' | 'raw' | 'outline';
+export type NoteType = 'quick' | 'research' | 'raw' | 'outline' | 'image';
 
 export interface Notebook {
   id: string;
@@ -20,7 +20,8 @@ export interface ProjectNote {
   metadata?: {
     urls?: string[];
     version?: number;
+    imageData?: string; // Base64 image data
   };
 }
 
-export type AppView = 'shelf' | 'steno' | 'research' | 'raw' | 'outlines';
+export type AppView = 'shelf' | 'steno' | 'research' | 'raw' | 'outlines' | 'visuals';

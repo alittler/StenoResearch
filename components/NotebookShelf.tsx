@@ -11,9 +11,10 @@ interface NotebookShelfProps {
   onAdd: (t: string, c: string) => void;
   onDelete: (id: string) => void;
   onImport?: (data: { notebooks: Notebook[], notes: ProjectNote[] }) => void;
+  isAIStudio: boolean;
 }
 
-export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, onSelect, onAdd, onDelete, onImport }) => {
+export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, onSelect, onAdd, onDelete, onImport, isAIStudio }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [color, setColor] = useState(COLORS[0]);
@@ -70,22 +71,35 @@ export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, 
       <div className="flex flex-col items-center gap-4">
         <h1 className="text-4xl font-bold font-mono tracking-tighter">PROJECT SHELF</h1>
         
-        <div className="flex gap-4">
+        <div className="flex flex-wrap justify-center gap-3">
           <button 
             onClick={handleExport}
-            className="text-[10px] font-bold font-mono text-stone-400 hover:text-stone-800 flex items-center gap-2 px-3 py-1 rounded-full border border-stone-200 hover:border-stone-400 transition-all uppercase tracking-widest"
+            className="text-[10px] font-bold font-mono text-stone-400 hover:text-stone-800 flex items-center gap-2 px-3 py-1.5 rounded-full border border-stone-200 hover:border-stone-400 transition-all uppercase tracking-widest bg-white/50"
           >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4-4m4 4V4"></path></svg>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4-4m4 4V4"></path></svg>
             Backup Library
           </button>
           
           <button 
             onClick={handleImportClick}
-            className="text-[10px] font-bold font-mono text-stone-400 hover:text-stone-800 flex items-center gap-2 px-3 py-1 rounded-full border border-stone-200 hover:border-stone-400 transition-all uppercase tracking-widest"
+            className="text-[10px] font-bold font-mono text-stone-400 hover:text-stone-800 flex items-center gap-2 px-3 py-1.5 rounded-full border border-stone-200 hover:border-stone-400 transition-all uppercase tracking-widest bg-white/50"
           >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
             Restore Library
           </button>
+
+          {!isAIStudio && (
+            <a 
+              href="https://www.doppler.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-[10px] font-bold font-mono text-stone-100 hover:text-white flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-800 hover:bg-black transition-all uppercase tracking-widest shadow-sm"
+              title="Manage your API keys securely with Doppler"
+            >
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
+              Secrets via Doppler
+            </a>
+          )}
           
           <input 
             type="file" 

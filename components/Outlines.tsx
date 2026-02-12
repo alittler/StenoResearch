@@ -10,6 +10,7 @@ interface OutlinesProps {
   existingOutlines: ProjectNote[];
   onSaveOutline: (content: string) => void;
   onDeleteOutline: (id: string) => void;
+  onResetKey: () => void;
 }
 
 const Outlines: React.FC<OutlinesProps> = ({ 
@@ -17,7 +18,8 @@ const Outlines: React.FC<OutlinesProps> = ({
   researchNotes, 
   existingOutlines, 
   onSaveOutline,
-  onDeleteOutline
+  onDeleteOutline,
+  onResetKey
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +43,13 @@ const Outlines: React.FC<OutlinesProps> = ({
       );
       onSaveOutline(text);
       setActiveOutlineId(null); 
-    } catch (err) {
-      setError("The synthesis failed. Try adding more specific research details.");
+    } catch (err: any) {
+      // Handle the case where a key reset is required due to 404 (KEY_RESET_REQUIRED)
+      if (err.message === 'KEY_RESET_REQUIRED') {
+        onResetKey();
+      } else {
+        setError("The synthesis failed. Try adding more specific research details.");
+      }
       console.error(err);
     } finally {
       setIsLoading(false);

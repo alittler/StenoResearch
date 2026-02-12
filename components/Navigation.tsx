@@ -12,6 +12,7 @@ interface NavigationProps {
 const Navigation: React.FC<NavigationProps> = ({ activeView, onViewChange, activeNotebookTitle, onBackToShelf }) => {
   const tabs: { id: AppView; label: string; icon: string }[] = [
     { id: 'steno', label: 'Notepad', icon: '📝' },
+    { id: 'visuals', label: 'Visuals', icon: '🖼️' },
     { id: 'outlines', label: 'Outlines', icon: '📑' },
     { id: 'research', label: 'Research', icon: '🔍' },
     { id: 'raw', label: 'Raw Data', icon: '📄' },

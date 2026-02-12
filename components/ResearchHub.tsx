@@ -8,11 +8,12 @@ interface ResearchHubProps {
   context: string;
   onAddResearch: (question: string, answer: string, urls: string[]) => void;
   onDeleteNote: (id: string) => void;
+  onResetKey: () => void;
 }
 
 const READ_MORE_THRESHOLD = 300;
 
-const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch, onDeleteNote }) => {
+const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch, onDeleteNote, onResetKey }) => {
   const [question, setQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +31,13 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
       const { text, urls } = await askResearchQuestion(question, context);
       onAddResearch(question, text, urls);
       setQuestion('');
-    } catch (err) {
-      setError("Failed to fetch answer. Please try again.");
+    } catch (err: any) {
+      // Handle the case where a key reset is required due to 404 (KEY_RESET_REQUIRED)
+      if (err.message === 'KEY_RESET_REQUIRED') {
+        onResetKey();
+      } else {
+        setError("Failed to fetch answer. Please try again.");
+      }
       console.error(err);
     } finally {
       setIsLoading(false);

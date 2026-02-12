@@ -7,6 +7,7 @@ import RawTextEditor from './components/RawTextEditor';
 import Navigation from './components/Navigation';
 import Outlines from './components/Outlines';
 import NotebookShelf from './components/NotebookShelf';
+import Visualizer from './components/Visualizer';
 
 const STORAGE_KEY_NOTES = 'steno_research_notes_v3';
 const STORAGE_KEY_NOTEBOOKS = 'steno_research_notebooks_v3';
@@ -25,15 +26,38 @@ const App: React.FC = () => {
   const [activeNotebookId, setActiveNotebookId] = useState<string>('general');
   const [activeView, setActiveView] = useState<AppView>('shelf');
   const [isInitialized, setIsInitialized] = useState(false);
-  
-  // unique key to force-reset the entire component tree on restore
   const [sessionKey, setSessionKey] = useState(0);
+  const [hasApiKey, setHasApiKey] = useState(true);
+  const [isAIStudio, setIsAIStudio] = useState(false);
 
-  // Undo/Redo History
   const [history, setHistory] = useState<ProjectNote[][]>([]);
   const [historyPointer, setHistoryPointer] = useState(-1);
 
-  // 1. Initial Load from Storage
+  // Check for API key on mount - required for production/external use
+  useEffect(() => {
+    const checkKey = async () => {
+      const aistudio = (window as any).aistudio;
+      if (aistudio) {
+        setIsAIStudio(true);
+        const selected = await aistudio.hasSelectedApiKey();
+        setHasApiKey(selected);
+      } else {
+        setIsAIStudio(false);
+        // Outside AI Studio, we rely on process.env.API_KEY (e.g. from Doppler/Netlify)
+        setHasApiKey(true); 
+      }
+    };
+    checkKey();
+  }, []);
+
+  const handleOpenKeySelector = async () => {
+    const aistudio = (window as any).aistudio;
+    if (aistudio) {
+      await aistudio.openSelectKey();
+      setHasApiKey(true); 
+    }
+  };
+
   useEffect(() => {
     const savedNotes = localStorage.getItem(STORAGE_KEY_NOTES);
     const savedNotebooks = localStorage.getItem(STORAGE_KEY_NOTEBOOKS);
@@ -44,32 +68,24 @@ const App: React.FC = () => {
     if (savedNotebooks) {
       try {
         const parsed = JSON.parse(savedNotebooks);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          loadedNotebooks = parsed;
-        }
+        if (Array.isArray(parsed) && parsed.length > 0) loadedNotebooks = parsed;
       } catch (e) { console.error("Load Error (Notebooks):", e); }
     }
     
     if (savedNotes) {
       try {
         const parsed = JSON.parse(savedNotes);
-        if (Array.isArray(parsed)) {
-          loadedNotes = parsed;
-        }
+        if (Array.isArray(parsed)) loadedNotes = parsed;
       } catch (e) { console.error("Load Error (Notes):", e); }
     }
 
     setNotebooks(loadedNotebooks);
     setNotes(loadedNotes);
-    
-    // Initialize history with loaded state
     setHistory([loadedNotes]);
     setHistoryPointer(0);
-    
     setIsInitialized(true);
-  }, [sessionKey]); // Re-run if sessionKey changes (Hard Reset)
+  }, [sessionKey]);
 
-  // 2. Continuous Sync to Storage
   useEffect(() => {
     if (!isInitialized) return;
     localStorage.setItem(STORAGE_KEY_NOTES, JSON.stringify(notes));
@@ -117,7 +133,6 @@ const App: React.FC = () => {
   const findTargetNotebook = useCallback((content: string, currentId: string): string => {
     const hashtags = content.match(/#[\w-]+/g)?.map(t => t.toLowerCase().replace('#', '')) || [];
     if (hashtags.length === 0) return currentId;
-
     for (const tag of hashtags) {
       const match = notebooks.find(nb => {
         const titleNormal = nb.title.toLowerCase().replace(/\s+/g, '');
@@ -129,24 +144,18 @@ const App: React.FC = () => {
     return currentId;
   }, [notebooks]);
 
-  // ATOMIC RESTORE: Write to disk and trigger a full app reboot
   const handleImportLibrary = (data: { notebooks: Notebook[], notes: ProjectNote[] }) => {
     if (confirm("This will permanently overwrite your current library. Proceed?")) {
       try {
-        // Step 1: Synchronous Write to Disk
         localStorage.setItem(STORAGE_KEY_NOTEBOOKS, JSON.stringify(data.notebooks));
         localStorage.setItem(STORAGE_KEY_NOTES, JSON.stringify(data.notes));
-        
-        // Step 2: Trigger Hard Reset
-        setIsInitialized(false); // Temporarily pause auto-save
-        setSessionKey(prev => prev + 1); // This triggers the loading useEffect again
+        setIsInitialized(false);
+        setSessionKey(prev => prev + 1);
         setActiveNotebookId('general');
         setActiveView('shelf');
-        
         alert("Library restored successfully.");
       } catch (err) {
         alert("Critical Error: Could not write to local storage.");
-        console.error(err);
       }
     }
   };
@@ -172,7 +181,7 @@ const App: React.FC = () => {
   };
 
   const addNote = useCallback((content: string, type: NoteType = 'quick', extra?: Partial<ProjectNote>) => {
-    const targetId = type === 'quick' ? findTargetNotebook(content, activeNotebookId) : activeNotebookId;
+    const targetId = findTargetNotebook(content, activeNotebookId);
     const tags = content.match(/#[\w-]+/g)?.map(t => t.toLowerCase()) || [];
     
     const newNote: ProjectNote = {
@@ -184,7 +193,6 @@ const App: React.FC = () => {
       timestamp: Date.now(),
       ...extra
     };
-    
     const newNotes = [newNote, ...notes];
     recordState(newNotes);
   }, [activeNotebookId, findTargetNotebook, notes, recordState]);
@@ -192,13 +200,8 @@ const App: React.FC = () => {
   const updateNote = useCallback((id: string, newContent: string) => {
     const noteToUpdate = notes.find(n => n.id === id);
     if (!noteToUpdate) return;
-
-    const targetId = noteToUpdate.type === 'quick' 
-      ? findTargetNotebook(newContent, noteToUpdate.notebookId) 
-      : noteToUpdate.notebookId;
-
+    const targetId = findTargetNotebook(newContent, noteToUpdate.notebookId);
     const tags = newContent.match(/#[\w-]+/g)?.map(t => t.toLowerCase()) || [];
-    
     const newNotes = notes.map(note => 
       note.id === id ? { ...note, content: newContent, tags, notebookId: targetId } : note
     );
@@ -211,7 +214,35 @@ const App: React.FC = () => {
   }, [notes, recordState]);
 
   return (
-    <div key={sessionKey} className="flex flex-col min-h-screen bg-stone-100 text-stone-900">
+    <div key={sessionKey} className="flex flex-col min-h-screen bg-stone-100 text-stone-900 selection:bg-stone-300 selection:text-stone-900">
+      {!hasApiKey && isAIStudio && (
+        <div className="fixed inset-0 z-[100] bg-stone-950/90 backdrop-blur-sm flex items-center justify-center p-6 text-center">
+          <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md space-y-6">
+            <div className="text-5xl">🔑</div>
+            <h2 className="text-2xl font-bold font-mono uppercase">API Key Required</h2>
+            <p className="text-stone-500 text-sm font-mono leading-relaxed">
+              To use high-quality research and visualization features, you must select a paid API key from your Google Cloud project.
+            </p>
+            <div className="space-y-4 pt-4">
+              <button 
+                onClick={handleOpenKeySelector}
+                className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all"
+              >
+                Select API Key
+              </button>
+              <a 
+                href="https://ai.google.dev/gemini-api/docs/billing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block text-[10px] text-stone-400 font-mono hover:text-stone-600 underline uppercase tracking-widest"
+              >
+                Learn about Billing
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Navigation 
         activeView={activeView} 
         onViewChange={setActiveView} 
@@ -234,6 +265,7 @@ const App: React.FC = () => {
                 onAdd={addNotebook} 
                 onDelete={deleteNotebook}
                 onImport={handleImportLibrary}
+                isAIStudio={isAIStudio}
               />
             )}
             {activeView === 'steno' && (
@@ -257,10 +289,26 @@ const App: React.FC = () => {
                 existingOutlines={filteredNotes.filter(n => n.type === 'outline')}
                 onSaveOutline={(content) => addNote(content, 'outline')}
                 onDeleteOutline={deleteNote}
+                onResetKey={() => setHasApiKey(false)}
+              />
+            )}
+            {activeView === 'visuals' && (
+              <Visualizer 
+                notes={filteredNotes.filter(n => n.type === 'image')}
+                notepadContext={filteredNotes.filter(n => n.type === 'quick').map(n => n.content).join('\n')}
+                onAddImage={(prompt, data) => addNote(prompt, 'image', { metadata: { imageData: data } })}
+                onDeleteImage={deleteNote}
+                onResetKey={() => setHasApiKey(false)}
               />
             )}
             {activeView === 'research' && (
-              <ResearchHub notes={filteredNotes.filter(n => n.type === 'research')} context={filteredNotes.map(n => n.content).join('\n')} onAddResearch={(q, a, urls) => addNote(a, 'research', { question: q, metadata: { urls } })} onDeleteNote={deleteNote} />
+              <ResearchHub 
+                notes={filteredNotes.filter(n => n.type === 'research')} 
+                context={filteredNotes.map(n => n.content).join('\n')} 
+                onAddResearch={(q, a, urls) => addNote(a, 'research', { question: q, metadata: { urls } })} 
+                onDeleteNote={deleteNote}
+                onResetKey={() => setHasApiKey(false)}
+              />
             )}
             {activeView === 'raw' && (
               <RawTextEditor 

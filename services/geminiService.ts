@@ -1,9 +1,12 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// We initialize inside functions to ensure the most up-to-date API key 
+// (especially when using the BYOK dialog window.aistudio.openSelectKey)
+const getClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function askResearchQuestion(question: string, context: string = "") {
+  const ai = getClient();
   const prompt = `
     I am working on a project. 
     Current context of my project: "${context}"
@@ -17,7 +20,7 @@ export async function askResearchQuestion(question: string, context: string = ""
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -30,14 +33,50 @@ export async function askResearchQuestion(question: string, context: string = ""
       .filter((uri: string | undefined): uri is string => !!uri) || [];
 
     return { text, urls };
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message?.includes("Requested entity was not found")) {
+      throw new Error("KEY_RESET_REQUIRED");
+    }
     console.error("Gemini API Error:", error);
     throw error;
   }
 }
 
+export async function generateProjectImage(prompt: string) {
+  const ai = getClient();
+  try {
+    // High-quality generation using Gemini 3 Pro Image
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-image-preview',
+      contents: {
+        parts: [{ text: `A high-quality artistic concept visualization of: ${prompt}. Cinematic lighting, detailed texture, professional composition.` }]
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1",
+          imageSize: "1K"
+        },
+        tools: [{ googleSearch: {} }] // Pro image model supports web search for better accuracy
+      }
+    });
+
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+      }
+    }
+    throw new Error("No image data returned");
+  } catch (error: any) {
+    if (error.message?.includes("Requested entity was not found")) {
+      throw new Error("KEY_RESET_REQUIRED");
+    }
+    console.error("Image Generation Error:", error);
+    throw error;
+  }
+}
+
 export async function weaveProjectOutline(notepadNotes: {content: string, timestamp: number}[], researchNotes: string[]) {
-  // Sort notes to ensure the model knows the temporal order
+  const ai = getClient();
   const sortedNotes = [...notepadNotes].sort((a, b) => b.timestamp - a.timestamp);
   
   const prompt = `
@@ -54,11 +93,10 @@ export async function weaveProjectOutline(notepadNotes: {content: string, timest
     ---
     
     INSTRUCTIONS:
-    1. Organize the brainstorming into a logical, hierarchical structure (e.g., Acts, Chapters, or Phases).
-    2. IMPORTANT OVERRIDE RULE: If details within the brainstorming notes conflict, always prioritize the NEWER notes (those at the top of the list). Newer notes represent updated decisions or corrections.
-    3. IMPORTANT RESEARCH RULE: If a detail in the brainstorming contradicts the research data, correct it in the outline and add a small [CORRECTED] note.
-    4. Fill in narrative or logical gaps using the search tool if necessary to ensure high quality.
-    5. Provide the result in a clean, readable text format suitable for a typewriter aesthetic.
+    1. Organize the brainstorming into a logical, hierarchical structure.
+    2. PRIORITIZE THE NEWER notes if conflicts arise.
+    3. Correct contradictions with research data and add a [CORRECTED] note.
+    4. Provide the result in a clean, readable text format.
   `;
 
   try {
@@ -67,26 +105,16 @@ export async function weaveProjectOutline(notepadNotes: {content: string, timest
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: 8000 } // Higher budget for complex synthesis
+        thinkingConfig: { thinkingBudget: 8000 }
       },
     });
 
-    const text = response.text || "The loom failed to weave a structure.";
-    return { text };
-  } catch (error) {
+    return { text: response.text || "The loom failed to weave a structure." };
+  } catch (error: any) {
+    if (error.message?.includes("Requested entity was not found")) {
+      throw new Error("KEY_RESET_REQUIRED");
+    }
     console.error("Outline Weave Error:", error);
     throw error;
   }
-}
-
-// Deprecated old weaveStory but keeping for compatibility if needed elsewhere
-export async function weaveStory(keywords: string) {
-  const prompt = `Generate interconnected plotlines for a novel based on: [${keywords}]`;
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: prompt,
-    });
-    return { text: response.text || "", urls: [] };
-  } catch (error) { return { text: "Error weaving.", urls: [] }; }
 }
