@@ -11,6 +11,7 @@ import Visualizer from './components/Visualizer';
 
 const STORAGE_KEY_NOTES = 'steno_research_notes_v3';
 const STORAGE_KEY_NOTEBOOKS = 'steno_research_notebooks_v3';
+const MANUAL_KEY_STORAGE = 'steno_manual_key';
 
 const DEFAULT_NOTEBOOK: Notebook = {
   id: 'general',
@@ -29,35 +30,50 @@ const App: React.FC = () => {
   const [sessionKey, setSessionKey] = useState(0);
   const [hasApiKey, setHasApiKey] = useState(true);
   const [isAIStudio, setIsAIStudio] = useState(false);
+  const [tempKey, setTempKey] = useState('');
 
   const [history, setHistory] = useState<ProjectNote[][]>([]);
   const [historyPointer, setHistoryPointer] = useState(-1);
 
-  // Detect environment and check for API key
+  // Check for API key on mount
   useEffect(() => {
     const checkKey = async () => {
       const aistudio = (window as any).aistudio;
+      const manualKey = localStorage.getItem(MANUAL_KEY_STORAGE);
+      const effectiveKey = manualKey || process.env.API_KEY;
+
       if (aistudio) {
         setIsAIStudio(true);
         const selected = await aistudio.hasSelectedApiKey();
         setHasApiKey(selected);
       } else {
         setIsAIStudio(false);
-        // In production/outside AI Studio, we check process.env.API_KEY
-        // This is typically injected via Doppler or Hosting Provider env vars
-        setHasApiKey(!!process.env.API_KEY); 
+        setHasApiKey(!!effectiveKey); 
       }
     };
     checkKey();
-  }, []);
+  }, [sessionKey]);
 
   const handleOpenKeySelector = async () => {
     const aistudio = (window as any).aistudio;
     if (aistudio) {
-      // Platform rule: open dialog and immediately assume success to clear blocking UI
       await aistudio.openSelectKey();
       setHasApiKey(true); 
     }
+  };
+
+  const handleSaveManualKey = () => {
+    if (tempKey.trim()) {
+      localStorage.setItem(MANUAL_KEY_STORAGE, tempKey.trim());
+      setHasApiKey(true);
+      setSessionKey(prev => prev + 1);
+    }
+  };
+
+  const handleClearKey = () => {
+    localStorage.removeItem(MANUAL_KEY_STORAGE);
+    setHasApiKey(false);
+    setSessionKey(prev => prev + 1);
   };
 
   useEffect(() => {
@@ -200,8 +216,7 @@ const App: React.FC = () => {
   }, [activeNotebookId, findTargetNotebook, notes, recordState]);
 
   const updateNote = useCallback((id: string, newContent: string) => {
-    // Fixed typo: was using undefined 'note' instead of predicate 'n'
-    const noteToUpdate = notes.find(n => n.id === id); 
+    const noteToUpdate = notes.find(n => n.id === id);
     if (!noteToUpdate) return;
     const targetId = findTargetNotebook(newContent, noteToUpdate.notebookId);
     const tags = newContent.match(/#[\w-]+/g)?.map(t => t.toLowerCase()) || [];
@@ -220,44 +235,50 @@ const App: React.FC = () => {
     <div key={sessionKey} className="flex flex-col min-h-screen bg-stone-100 text-stone-900 selection:bg-stone-300 selection:text-stone-900">
       {!hasApiKey && (
         <div className="fixed inset-0 z-[100] bg-stone-950/90 backdrop-blur-sm flex items-center justify-center p-6 text-center">
-          <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md space-y-6 border-b-8 border-stone-200">
-            <div className="text-5xl">{isAIStudio ? '🔑' : '🛡️'}</div>
-            <h2 className="text-2xl font-bold font-mono uppercase tracking-tighter">
-              {isAIStudio ? 'API Key Required' : 'Production Secrets Missing'}
-            </h2>
+          <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md space-y-6">
+            <div className="text-5xl">🔑</div>
+            <h2 className="text-2xl font-bold font-mono uppercase">API Key Required</h2>
             <p className="text-stone-500 text-sm font-mono leading-relaxed">
               {isAIStudio 
-                ? 'To use high-quality research features in AI Studio, you must select a paid project from your Google Cloud account using the platform dialog.'
-                : 'This production instance is missing its API_KEY. For security, we recommend managing your secrets via Doppler and syncing them to your hosting provider.'}
+                ? "To use research and visualization features, select a paid API key from your project."
+                : "Enter your Gemini API Key to enable research and visuals. It will be stored locally in your browser."}
             </p>
+            
             <div className="space-y-4 pt-4">
               {isAIStudio ? (
                 <button 
                   onClick={handleOpenKeySelector}
-                  className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all shadow-lg active:scale-95"
+                  className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all"
                 >
                   Select API Key
                 </button>
               ) : (
-                <a 
-                  href="https://www.doppler.com" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all shadow-lg active:scale-95 text-center"
-                >
-                  Configure via Doppler
-                </a>
+                <div className="space-y-3">
+                  <input 
+                    type="password"
+                    value={tempKey}
+                    onChange={(e) => setTempKey(e.target.value)}
+                    placeholder="AIStudio API Key..."
+                    className="w-full bg-stone-50 border-stone-200 rounded-xl px-4 py-3 font-mono text-sm focus:ring-1 focus:ring-stone-500 outline-none"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveManualKey()}
+                  />
+                  <button 
+                    onClick={handleSaveManualKey}
+                    className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all"
+                  >
+                    Save Key
+                  </button>
+                </div>
               )}
-              <div className="flex flex-col gap-2">
-                <a 
-                  href={isAIStudio ? "https://ai.google.dev/gemini-api/docs/billing" : "https://docs.doppler.com/docs/enclave-introduction"} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block text-[10px] text-stone-400 font-mono hover:text-stone-600 underline uppercase tracking-widest"
-                >
-                  {isAIStudio ? 'Learn about Billing' : 'Learn about Secret Management'}
-                </a>
-              </div>
+              
+              <a 
+                href="https://aistudio.google.com/app/apikey" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block text-[10px] text-stone-400 font-mono hover:text-stone-600 underline uppercase tracking-widest"
+              >
+                Get a key from AI Studio
+              </a>
             </div>
           </div>
         </div>
@@ -286,6 +307,7 @@ const App: React.FC = () => {
                 onDelete={deleteNotebook}
                 onImport={handleImportLibrary}
                 isAIStudio={isAIStudio}
+                onClearKey={handleClearKey}
               />
             )}
             {activeView === 'steno' && (

@@ -12,9 +12,10 @@ interface NotebookShelfProps {
   onDelete: (id: string) => void;
   onImport?: (data: { notebooks: Notebook[], notes: ProjectNote[] }) => void;
   isAIStudio: boolean;
+  onClearKey: () => void;
 }
 
-export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, onSelect, onAdd, onDelete, onImport, isAIStudio }) => {
+export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, onSelect, onAdd, onDelete, onImport, isAIStudio, onClearKey }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [color, setColor] = useState(COLORS[0]);
@@ -66,6 +67,8 @@ export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, 
     e.target.value = ''; // Reset input
   };
 
+  const hasManualKey = !!localStorage.getItem('steno_manual_key');
+
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col items-center gap-4">
@@ -88,18 +91,26 @@ export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, 
             Restore Library
           </button>
 
-          {!isAIStudio && (
+          {!isAIStudio && hasManualKey && (
+            <button 
+              onClick={onClearKey}
+              className="text-[10px] font-bold font-mono text-red-400 hover:text-red-600 flex items-center gap-2 px-3 py-1.5 rounded-full border border-red-200 hover:border-red-400 transition-all uppercase tracking-widest bg-red-50/50"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+              Clear Manual Key
+            </button>
+          )}
+
+          {!isAIStudio && !hasManualKey && (
             <a 
               href="https://www.doppler.com" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-[10px] font-bold font-mono text-stone-100 hover:text-white flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-800 hover:bg-black transition-all uppercase tracking-widest shadow-sm ring-1 ring-stone-950/20"
-              title="Manage your API keys securely via Doppler Secret Ops"
+              className="text-[10px] font-bold font-mono text-stone-100 hover:text-white flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-800 hover:bg-black transition-all uppercase tracking-widest shadow-sm"
+              title="Manage your API keys securely with Doppler"
             >
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 6c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 12c-2.67 0-5-1.33-5-4 0-2.67 2.33-4 5-4s5 1.33 5 4c0 2.67-2.33 4-5 4z"/>
-              </svg>
-              API Keys via Doppler
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
+              Secrets via Doppler
             </a>
           )}
           

@@ -2,8 +2,12 @@
 import { GoogleGenAI } from "@google/genai";
 
 // We initialize inside functions to ensure the most up-to-date API key 
-// (especially when using the BYOK dialog window.aistudio.openSelectKey)
-const getClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+// (especially when using the BYOK dialog window.aistudio.openSelectKey or manual entry)
+const getClient = () => {
+  const manualKey = localStorage.getItem('steno_manual_key');
+  const apiKey = manualKey || process.env.API_KEY;
+  return new GoogleGenAI({ apiKey: apiKey });
+};
 
 export async function askResearchQuestion(question: string, context: string = "") {
   const ai = getClient();
@@ -34,7 +38,7 @@ export async function askResearchQuestion(question: string, context: string = ""
 
     return { text, urls };
   } catch (error: any) {
-    if (error.message?.includes("Requested entity was not found")) {
+    if (error.message?.includes("Requested entity was not found") || error.message?.includes("API_KEY_INVALID")) {
       throw new Error("KEY_RESET_REQUIRED");
     }
     console.error("Gemini API Error:", error);
@@ -67,7 +71,7 @@ export async function generateProjectImage(prompt: string) {
     }
     throw new Error("No image data returned");
   } catch (error: any) {
-    if (error.message?.includes("Requested entity was not found")) {
+    if (error.message?.includes("Requested entity was not found") || error.message?.includes("API_KEY_INVALID")) {
       throw new Error("KEY_RESET_REQUIRED");
     }
     console.error("Image Generation Error:", error);
@@ -111,7 +115,7 @@ export async function weaveProjectOutline(notepadNotes: {content: string, timest
 
     return { text: response.text || "The loom failed to weave a structure." };
   } catch (error: any) {
-    if (error.message?.includes("Requested entity was not found")) {
+    if (error.message?.includes("Requested entity was not found") || error.message?.includes("API_KEY_INVALID")) {
       throw new Error("KEY_RESET_REQUIRED");
     }
     console.error("Outline Weave Error:", error);
