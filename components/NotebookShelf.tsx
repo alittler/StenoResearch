@@ -93,11 +93,13 @@ export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, 
               href="https://www.doppler.com" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-[10px] font-bold font-mono text-stone-100 hover:text-white flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-800 hover:bg-black transition-all uppercase tracking-widest shadow-sm"
-              title="Manage your API keys securely with Doppler"
+              className="text-[10px] font-bold font-mono text-stone-100 hover:text-white flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-800 hover:bg-black transition-all uppercase tracking-widest shadow-sm ring-1 ring-stone-950/20"
+              title="Manage your API keys securely via Doppler Secret Ops"
             >
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
-              Secrets via Doppler
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 6c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 12c-2.67 0-5-1.33-5-4 0-2.67 2.33-4 5-4s5 1.33 5 4c0 2.67-2.33 4-5 4z"/>
+              </svg>
+              API Keys via Doppler
             </a>
           )}
           

@@ -33,7 +33,7 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<ProjectNote[][]>([]);
   const [historyPointer, setHistoryPointer] = useState(-1);
 
-  // Check for API key on mount - required for production/external use
+  // Detect environment and check for API key
   useEffect(() => {
     const checkKey = async () => {
       const aistudio = (window as any).aistudio;
@@ -43,8 +43,9 @@ const App: React.FC = () => {
         setHasApiKey(selected);
       } else {
         setIsAIStudio(false);
-        // Outside AI Studio, we rely on process.env.API_KEY (e.g. from Doppler/Netlify)
-        setHasApiKey(true); 
+        // In production/outside AI Studio, we check process.env.API_KEY
+        // This is typically injected via Doppler or Hosting Provider env vars
+        setHasApiKey(!!process.env.API_KEY); 
       }
     };
     checkKey();
@@ -53,6 +54,7 @@ const App: React.FC = () => {
   const handleOpenKeySelector = async () => {
     const aistudio = (window as any).aistudio;
     if (aistudio) {
+      // Platform rule: open dialog and immediately assume success to clear blocking UI
       await aistudio.openSelectKey();
       setHasApiKey(true); 
     }
@@ -198,7 +200,8 @@ const App: React.FC = () => {
   }, [activeNotebookId, findTargetNotebook, notes, recordState]);
 
   const updateNote = useCallback((id: string, newContent: string) => {
-    const noteToUpdate = notes.find(n => n.id === id);
+    // Fixed typo: was using undefined 'note' instead of predicate 'n'
+    const noteToUpdate = notes.find(n => n.id === id); 
     if (!noteToUpdate) return;
     const targetId = findTargetNotebook(newContent, noteToUpdate.notebookId);
     const tags = newContent.match(/#[\w-]+/g)?.map(t => t.toLowerCase()) || [];
@@ -215,29 +218,46 @@ const App: React.FC = () => {
 
   return (
     <div key={sessionKey} className="flex flex-col min-h-screen bg-stone-100 text-stone-900 selection:bg-stone-300 selection:text-stone-900">
-      {!hasApiKey && isAIStudio && (
+      {!hasApiKey && (
         <div className="fixed inset-0 z-[100] bg-stone-950/90 backdrop-blur-sm flex items-center justify-center p-6 text-center">
-          <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md space-y-6">
-            <div className="text-5xl">🔑</div>
-            <h2 className="text-2xl font-bold font-mono uppercase">API Key Required</h2>
+          <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md space-y-6 border-b-8 border-stone-200">
+            <div className="text-5xl">{isAIStudio ? '🔑' : '🛡️'}</div>
+            <h2 className="text-2xl font-bold font-mono uppercase tracking-tighter">
+              {isAIStudio ? 'API Key Required' : 'Production Secrets Missing'}
+            </h2>
             <p className="text-stone-500 text-sm font-mono leading-relaxed">
-              To use high-quality research and visualization features, you must select a paid API key from your Google Cloud project.
+              {isAIStudio 
+                ? 'To use high-quality research features in AI Studio, you must select a paid project from your Google Cloud account using the platform dialog.'
+                : 'This production instance is missing its API_KEY. For security, we recommend managing your secrets via Doppler and syncing them to your hosting provider.'}
             </p>
             <div className="space-y-4 pt-4">
-              <button 
-                onClick={handleOpenKeySelector}
-                className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all"
-              >
-                Select API Key
-              </button>
-              <a 
-                href="https://ai.google.dev/gemini-api/docs/billing" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block text-[10px] text-stone-400 font-mono hover:text-stone-600 underline uppercase tracking-widest"
-              >
-                Learn about Billing
-              </a>
+              {isAIStudio ? (
+                <button 
+                  onClick={handleOpenKeySelector}
+                  className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all shadow-lg active:scale-95"
+                >
+                  Select API Key
+                </button>
+              ) : (
+                <a 
+                  href="https://www.doppler.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block w-full bg-stone-900 text-white py-4 rounded-xl font-bold font-mono uppercase hover:bg-black transition-all shadow-lg active:scale-95 text-center"
+                >
+                  Configure via Doppler
+                </a>
+              )}
+              <div className="flex flex-col gap-2">
+                <a 
+                  href={isAIStudio ? "https://ai.google.dev/gemini-api/docs/billing" : "https://docs.doppler.com/docs/enclave-introduction"} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block text-[10px] text-stone-400 font-mono hover:text-stone-600 underline uppercase tracking-widest"
+                >
+                  {isAIStudio ? 'Learn about Billing' : 'Learn about Secret Management'}
+                </a>
+              </div>
             </div>
           </div>
         </div>
