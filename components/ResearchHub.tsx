@@ -30,7 +30,7 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
       onAddResearch(question, text, urls);
       setQuestion('');
     } catch (err: any) {
-      setError("AI Service connection failed. Ensure API_KEY environment variable is defined.");
+      setError("AI Service connection failed. Check your API_KEY environment.");
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -52,65 +52,68 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="bg-white rounded-2xl p-6 md:p-8 shadow-xl border border-stone-200 paper-texture">
-        <h2 className="text-xl md:text-2xl font-black flex items-center gap-3 mb-6 uppercase tracking-tighter text-stone-800">
-          <span className="text-blue-500">🔍</span> Research Assistant
+      {/* Research Dock */}
+      <div className="bg-stone-800 rounded-3xl p-6 md:p-10 shadow-2xl border-b-[8px] border-stone-900 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+          <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        </div>
+        
+        <h2 className="text-xl md:text-2xl font-black font-mono text-stone-100 uppercase tracking-tighter mb-6 flex items-center gap-3">
+          Field Intelligence
         </h2>
         
-        <p className="text-stone-500 text-sm mb-6 font-mono leading-relaxed">
-          The research tool verifies facts across the live web using your project notes as grounding context.
-        </p>
-        
-        <form onSubmit={handleAsk} className="flex flex-col gap-4">
+        <form onSubmit={handleAsk} className="flex flex-col gap-5 relative z-10">
           <textarea 
             value={question} 
             onChange={(e) => setQuestion(e.target.value)} 
-            placeholder="WHAT SPECIFIC CONCEPT DO YOU NEED TO VERIFY?" 
-            className="w-full p-5 rounded-xl border border-stone-200 focus:ring-2 focus:ring-stone-800 focus:border-transparent transition-all min-h-[120px] resize-none text-base text-stone-800 font-mono uppercase placeholder:text-stone-300" 
+            placeholder="ENTER RESEARCH PARAMETERS..." 
+            className="w-full p-6 rounded-2xl bg-stone-900 border-2 border-stone-700 text-stone-100 font-mono uppercase placeholder:text-stone-600 focus:border-stone-500 outline-none transition-all min-h-[140px] resize-none text-base" 
           />
           <div className="flex justify-end">
-            <button type="submit" disabled={!question.trim() || isLoading} className="w-full md:w-auto px-8 py-4 bg-stone-900 text-white rounded-xl font-bold font-mono uppercase text-xs hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-lg active:scale-95">
+            <button type="submit" disabled={!question.trim() || isLoading} className="w-full md:w-auto px-10 py-5 bg-stone-100 text-stone-900 rounded-xl font-black font-mono uppercase text-xs hover:bg-white transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl active:scale-95">
               {isLoading ? (
                 <>
                   <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  <span>Querying Web...</span>
+                  <span>Scanning Records...</span>
                 </>
-              ) : "Execute Research"}
+              ) : "Cross-Reference Web"}
             </button>
           </div>
-          {error && <p className="text-red-500 text-[10px] font-mono uppercase font-bold text-center mt-2">{error}</p>}
+          {error && <p className="text-red-400 text-[10px] font-mono uppercase font-black text-center">{error}</p>}
         </form>
       </div>
 
+      {/* Results Clipping Board */}
       <div className="space-y-6">
         <div className="relative">
-          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Filter findings..." className="w-full pl-5 pr-5 py-3.5 bg-white border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-400 outline-none text-sm font-mono transition-all shadow-sm" />
+          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="SEARCH ARCHIVE..." className="w-full pl-6 pr-6 py-4 bg-stone-800 border-2 border-stone-700 rounded-2xl text-stone-100 font-mono text-xs uppercase placeholder:text-stone-600 outline-none focus:border-stone-500 shadow-inner" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {filteredNotes.map((note) => {
             const isLong = note.content.length > READ_MORE_THRESHOLD;
             const isExpanded = expandedNotes[note.id];
             const displayContent = isLong && !isExpanded ? note.content.slice(0, READ_MORE_THRESHOLD) + "..." : note.content;
             return (
-              <div key={note.id} className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-md transition-shadow">
-                <div className="p-4 border-b border-stone-100 bg-stone-50 flex justify-between items-start">
-                  <h3 className="font-bold text-stone-800 flex-1 line-clamp-1 text-xs font-mono uppercase tracking-tight">{note.question}</h3>
-                  <button onClick={() => onDeleteNote(note.id)} className="text-stone-300 hover:text-red-500 transition-colors ml-2 p-1">
+              <div key={note.id} className="group relative bg-[#fffef0] rounded-lg shadow-2xl overflow-hidden flex flex-col paper-texture border-b-4 border-stone-300 transform transition-transform md:hover:-rotate-1">
+                <div className="p-5 border-b border-stone-200/50 bg-stone-100/50 flex justify-between items-start">
+                  <h3 className="font-black text-stone-800 text-[10px] font-mono uppercase tracking-widest flex-1">{note.question}</h3>
+                  <button onClick={() => onDeleteNote(note.id)} className="text-stone-300 hover:text-red-500 transition-colors ml-4 p-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                   </button>
                 </div>
-                <div className="p-5 flex-1">
-                  <p className="text-stone-600 text-sm leading-relaxed mb-4 whitespace-pre-wrap font-sans">{displayContent}</p>
+                <div className="p-6 flex-1 relative">
+                  <div className="absolute left-4 top-0 bottom-0 w-[1px] bg-red-100 pointer-events-none"></div>
+                  <p className="text-stone-700 text-sm leading-relaxed mb-6 whitespace-pre-wrap font-sans pl-4">{displayContent}</p>
                   {isLong && (
-                    <button onClick={() => toggleExpand(note.id)} className="text-[10px] font-bold text-blue-600 uppercase mb-4 hover:underline">
-                      {isExpanded ? 'Show Less' : 'Read Full Discovery'}
+                    <button onClick={() => toggleExpand(note.id)} className="text-[10px] font-black text-blue-600 uppercase mb-6 hover:underline pl-4">
+                      {isExpanded ? 'Compress Finding' : 'Read Full Report'}
                     </button>
                   )}
                   {note.metadata?.urls && note.metadata.urls.length > 0 && (
-                    <div className="space-y-2 mt-4 pt-4 border-t border-stone-100">
-                      <p className="text-[10px] uppercase font-black text-stone-400 tracking-[0.2em]">Verified Sources</p>
-                      <div className="flex flex-col gap-1.5">
+                    <div className="space-y-3 mt-6 pt-6 border-t border-stone-200/50 pl-4">
+                      <p className="text-[9px] uppercase font-black text-stone-400 tracking-[0.2em]">Verified Sources</p>
+                      <div className="flex flex-col gap-2">
                         {note.metadata.urls.slice(0, 3).map((url, i) => (
                           <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:text-blue-800 truncate font-mono">
                             {url.replace('https://', '').replace('www.', '')}
@@ -120,6 +123,8 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
                     </div>
                   )}
                 </div>
+                {/* Visual binder hole decoration */}
+                <div className="absolute top-1/2 left-2 -translate-y-1/2 w-3 h-3 rounded-full bg-stone-800/10 border border-stone-800/20"></div>
               </div>
             );
           })}
