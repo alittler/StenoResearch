@@ -1,8 +1,28 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// Create a fresh instance for every call to ensure the latest API_KEY is used
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+/**
+ * Safely retrieve the API key from the environment.
+ * Prevents the app from crashing if 'process' is not defined in the browser.
+ */
+const getApiKey = () => {
+  try {
+    // In many environments, process.env is replaced at build time.
+    // We use a safe check to avoid ReferenceErrors.
+    return (typeof process !== 'undefined' && process.env?.API_KEY) || 
+           (globalThis as any).process?.env?.API_KEY;
+  } catch (e) {
+    return undefined;
+  }
+};
+
+const getAI = () => {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error("API_KEY_NOT_FOUND");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export async function askResearchQuestion(question: string, context: string = "") {
   try {
@@ -61,7 +81,7 @@ export async function weaveProjectOutline(notepadNotes: {content: string}[], res
   try {
     const ai = getAI();
     const prompt = `
-      Create a structured project brief/outline.
+      Create a structured project brief/outline based on these notes and research.
       Input Notes: ${notepadNotes.map(n => n.content).join('\n---\n')}
       Research: ${researchNotes.join('\n---\n')}
     `;

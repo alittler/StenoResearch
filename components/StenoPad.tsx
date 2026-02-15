@@ -7,10 +7,6 @@ interface StenoPadProps {
   onAddNote: (content: string) => void;
   onUpdateNote: (id: string, content: string) => void;
   onDeleteNote: (id: string) => void;
-  onUndo?: () => void;
-  onRedo?: () => void;
-  canUndo?: boolean;
-  canRedo?: boolean;
   notebookColor?: string;
 }
 
@@ -52,50 +48,53 @@ const StenoPad: React.FC<StenoPadProps> = ({
   , [notes]);
 
   return (
-    <div className="relative max-w-3xl mx-auto flex flex-col min-h-[70vh] animate-in slide-in-from-bottom-8 duration-700">
+    <div className="relative max-w-3xl mx-auto flex flex-col min-h-[80vh] animate-fade-in">
       {/* Metallic Spiral Rings */}
-      <div className="absolute -top-8 left-0 right-0 flex justify-between px-10 md:px-16 z-30 pointer-events-none">
-        {[...Array(12)].map((_, i) => (
+      <div className="absolute -top-6 left-0 right-0 flex justify-around px-8 md:px-12 z-40 pointer-events-none">
+        {[...Array(14)].map((_, i) => (
           <div key={i} className="flex flex-col items-center">
-            <div className="w-4 h-12 bg-gradient-to-r from-stone-400 via-stone-100 to-stone-400 rounded-full border border-stone-500 shadow-md"></div>
+            <div className="w-3.5 h-10 bg-gradient-to-r from-stone-400 via-stone-100 to-stone-400 rounded-full border border-stone-500 shadow-lg"></div>
           </div>
         ))}
       </div>
 
       {/* Main Paper Body */}
       <div 
-        className="flex-1 rounded-b-xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] relative overflow-hidden flex flex-col border-t-[10px] border-stone-300" 
+        className="flex-1 rounded-b-xl shadow-2xl relative overflow-hidden flex flex-col border-t-[14px] border-stone-300 paper-texture" 
         style={{ backgroundColor: notebookColor }}
       >
-        {/* Subtle Horizontal Ruling (Ruled Paper Effect) */}
+        {/* Binding Shadow (Simulates the left side of a bound pad) */}
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-stone-900/10 to-transparent z-10 pointer-events-none"></div>
+
+        {/* Ruled Blue Lines */}
         <div className="absolute inset-0 pointer-events-none opacity-40 z-0" 
              style={{ 
                backgroundImage: `linear-gradient(#add8e6 1px, transparent 1px)`, 
-               backgroundSize: '100% 2.2rem',
-               backgroundPosition: '0 1.1rem'
+               backgroundSize: '100% 2.4rem',
+               backgroundPosition: '0 1.2rem'
              }}>
         </div>
 
-        {/* Double Red Vertical Margin */}
-        <div className="absolute left-[3.5rem] md:left-[5rem] top-0 bottom-0 w-[1px] bg-red-400 opacity-40 z-10"></div>
-        <div className="absolute left-[3.7rem] md:left-[5.2rem] top-0 bottom-0 w-[1px] bg-red-400 opacity-20 z-10"></div>
+        {/* Double Red Margin */}
+        <div className="absolute left-[4rem] md:left-[6rem] top-0 bottom-0 w-[1px] bg-red-400 opacity-40 z-10"></div>
+        <div className="absolute left-[4.2rem] md:left-[6.2rem] top-0 bottom-0 w-[1px] bg-red-400 opacity-20 z-10"></div>
 
-        <div className="flex-1 overflow-y-auto px-8 md:px-24 pt-16 pb-40 z-20 relative no-scrollbar">
+        <div className="flex-1 overflow-y-auto px-10 md:px-28 pt-16 pb-44 z-20 relative no-scrollbar">
           {notes.length === 0 ? (
-            <div className="mt-20 text-center">
-              <span className="text-4xl opacity-20 block mb-4">✍️</span>
-              <p className="text-stone-300 font-mono text-sm uppercase tracking-[0.3em] font-bold">Awaiting Observations...</p>
+            <div className="mt-24 text-center">
+              <span className="text-5xl opacity-10 block mb-6">🖋️</span>
+              <p className="text-stone-300 font-mono text-xs uppercase tracking-[0.4em] font-black">Project Observation Logs</p>
             </div>
           ) : (
             <div className="space-y-0">
               {sortedNotes.map((note) => (
-                <div key={note.id} className="group relative border-b border-stone-200/50 py-2">
+                <div key={note.id} className="group relative border-b border-stone-200/50 py-3">
                   <div className="flex items-start">
                     <div className="flex-1 min-w-0">
                       {editingId === note.id ? (
                         <textarea
                           autoFocus
-                          className="w-full bg-transparent border-none focus:ring-0 font-handwriting text-2xl text-blue-800 p-0 resize-none h-24"
+                          className="w-full bg-transparent border-none focus:ring-0 font-handwriting text-2xl text-blue-700 p-0 resize-none h-24"
                           defaultValue={note.content}
                           onBlur={(e) => {
                             onUpdateNote(note.id, e.target.value);
@@ -104,19 +103,24 @@ const StenoPad: React.FC<StenoPadProps> = ({
                         />
                       ) : (
                         <p 
-                          className="font-handwriting text-2xl md:text-3xl text-stone-800 leading-[2.2rem] cursor-text"
+                          className="font-handwriting text-3xl text-stone-800 leading-[2.4rem] cursor-text"
                           onClick={() => setEditingId(note.id)}
                         >
                           {note.content}
                         </p>
                       )}
-                      <span className="text-[9px] font-mono text-stone-400 uppercase tracking-tighter block mt-1">
-                        {new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[10px] font-mono text-stone-400 font-bold uppercase tracking-widest">
+                          ENTRY #{new Date(note.timestamp).getTime().toString().slice(-4)}
+                        </span>
+                        <span className="text-[10px] font-mono text-stone-300">
+                          {new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
                     </div>
                     <button 
                       onClick={() => onDeleteNote(note.id)} 
-                      className="opacity-0 group-hover:opacity-100 p-1 text-red-300 hover:text-red-500 transition-opacity ml-4"
+                      className="opacity-0 group-hover:opacity-100 p-1.5 text-stone-300 hover:text-red-500 transition-opacity ml-4"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
@@ -127,22 +131,22 @@ const StenoPad: React.FC<StenoPadProps> = ({
           )}
         </div>
 
-        {/* Floating Input Dock at the bottom of the pad */}
-        <div className="absolute bottom-0 left-0 right-0 bg-white/70 backdrop-blur-md border-t border-stone-200/50 p-6 z-30">
+        {/* Input Dock */}
+        <div className="absolute bottom-0 left-0 right-0 bg-white/60 backdrop-blur-xl border-t border-stone-200/50 p-6 z-40">
           <div className="flex items-end gap-4 max-w-2xl mx-auto">
             <textarea 
               ref={textareaRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Scribble here..."
-              className="flex-1 bg-stone-100/50 rounded-xl px-5 py-3 font-handwriting text-2xl text-stone-700 placeholder:text-stone-300 border border-stone-200 focus:ring-2 focus:ring-stone-400 focus:border-transparent outline-none transition-all"
+              placeholder="Record a project finding..."
+              className="flex-1 bg-white/80 rounded-2xl px-6 py-4 font-handwriting text-3xl text-stone-800 placeholder:text-stone-300 border border-stone-100 focus:ring-4 focus:ring-stone-200 focus:border-transparent outline-none shadow-inner transition-all"
               rows={1}
             />
             <button 
               onClick={triggerAddNote}
               disabled={!inputValue.trim()}
-              className="px-6 py-4 bg-stone-800 text-white rounded-xl text-xs font-bold font-mono uppercase hover:bg-black transition-all active:scale-95 disabled:opacity-30 shadow-lg"
+              className="px-8 py-4 bg-stone-900 text-white rounded-2xl text-[10px] font-black font-mono uppercase hover:bg-black transition-all active:scale-95 disabled:opacity-20 shadow-xl"
             >
               Post
             </button>
@@ -150,8 +154,8 @@ const StenoPad: React.FC<StenoPadProps> = ({
         </div>
       </div>
       
-      {/* Decorative Cardboard Backing */}
-      <div className="absolute inset-0 -z-10 bg-amber-900/10 translate-x-3 translate-y-3 rounded-xl"></div>
+      {/* Physical Backing */}
+      <div className="absolute inset-0 -z-10 bg-stone-800/10 translate-x-4 translate-y-4 rounded-xl"></div>
     </div>
   );
 };
