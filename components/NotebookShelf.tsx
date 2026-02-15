@@ -13,9 +13,26 @@ interface NotebookShelfProps {
   onImport?: (data: { notebooks: Notebook[], notes: ProjectNote[] }) => void;
   isAIStudio: boolean;
   onClearKey: () => void;
+  hasUnsavedChanges: boolean;
+  onBackupPerformed: () => void;
+  hasKey: boolean;
+  onPromptForKey: () => void;
 }
 
-export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, onSelect, onAdd, onDelete, onImport, isAIStudio, onClearKey }) => {
+export const NotebookShelf: React.FC<NotebookShelfProps> = ({ 
+  notebooks, 
+  notes, 
+  onSelect, 
+  onAdd, 
+  onDelete, 
+  onImport, 
+  isAIStudio, 
+  onClearKey,
+  hasUnsavedChanges,
+  onBackupPerformed,
+  hasKey,
+  onPromptForKey
+}) => {
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [color, setColor] = useState(COLORS[0]);
@@ -37,6 +54,8 @@ export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, 
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    
+    onBackupPerformed();
   };
 
   const handleImportClick = () => {
@@ -60,120 +79,121 @@ export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, 
         }
       } catch (err) {
         alert("Restore Failed: Invalid file format. Please upload a .json backup file.");
-        console.error("Parse error:", err);
       }
     };
     reader.readAsText(file);
-    e.target.value = ''; // Reset input
+    e.target.value = ''; 
   };
 
   const hasManualKey = !!localStorage.getItem('steno_manual_key');
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col items-center gap-4">
-        <h1 className="text-4xl font-bold font-mono tracking-tighter">PROJECT SHELF</h1>
+    <div className="space-y-8 md:space-y-12 animate-in fade-in duration-500 pb-20">
+      <div className="flex flex-col items-center gap-4 md:gap-6">
+        <h1 className="text-3xl md:text-4xl font-bold font-mono tracking-tighter">PROJECT SHELF</h1>
         
-        <div className="flex flex-wrap justify-center gap-3">
-          <button 
-            onClick={handleExport}
-            className="text-[10px] font-bold font-mono text-stone-400 hover:text-stone-800 flex items-center gap-2 px-3 py-1.5 rounded-full border border-stone-200 hover:border-stone-400 transition-all uppercase tracking-widest bg-white/50"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4-4m4 4V4"></path></svg>
-            Backup Library
-          </button>
+        <div className="flex flex-wrap justify-center gap-2 md:gap-3 items-center">
+          <div className="relative group">
+            <button 
+              onClick={handleExport}
+              className={`text-[9px] md:text-[10px] font-bold font-mono flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border transition-all uppercase tracking-widest ${hasUnsavedChanges ? 'bg-orange-50 border-orange-200 text-orange-600 hover:border-orange-400' : 'bg-white/50 border-stone-200 text-stone-400 hover:border-stone-400'}`}
+            >
+              <svg className="w-3 h-3 md:w-3.5 md:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4-4m4 4V4"></path></svg>
+              <span className="hidden xs:inline">Backup Library</span>
+              <span className="xs:hidden">Backup</span>
+              {!hasUnsavedChanges && (
+                <span className="flex items-center gap-1 text-green-600 font-bold ml-1">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+                  <span className="hidden md:inline">SYNCED</span>
+                </span>
+              )}
+            </button>
+            {hasUnsavedChanges && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-stone-100 animate-pulse shadow-sm"></div>
+            )}
+          </div>
           
           <button 
             onClick={handleImportClick}
-            className="text-[10px] font-bold font-mono text-stone-400 hover:text-stone-800 flex items-center gap-2 px-3 py-1.5 rounded-full border border-stone-200 hover:border-stone-400 transition-all uppercase tracking-widest bg-white/50"
+            className="text-[9px] md:text-[10px] font-bold font-mono text-stone-400 hover:text-stone-800 flex items-center gap-2 px-3 py-2 rounded-full border border-stone-200 hover:border-stone-400 transition-all uppercase tracking-widest bg-white/50"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-            Restore Library
+            <svg className="w-3 h-3 md:w-3.5 md:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+            <span className="hidden xs:inline">Restore Library</span>
+            <span className="xs:hidden">Restore</span>
           </button>
+
+          {!hasKey && (
+            <button 
+              onClick={onPromptForKey}
+              className="text-[9px] md:text-[10px] font-bold font-mono text-stone-500 hover:text-stone-900 flex items-center gap-2 px-3 py-2 rounded-full border border-stone-300 transition-all uppercase tracking-widest bg-amber-50"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+              Connect AI
+            </button>
+          )}
 
           {!isAIStudio && hasManualKey && (
             <button 
               onClick={onClearKey}
-              className="text-[10px] font-bold font-mono text-red-400 hover:text-red-600 flex items-center gap-2 px-3 py-1.5 rounded-full border border-red-200 hover:border-red-400 transition-all uppercase tracking-widest bg-red-50/50"
+              className="text-[9px] md:text-[10px] font-bold font-mono text-red-400 hover:text-red-600 flex items-center gap-2 px-3 py-2 rounded-full border border-red-200 hover:border-red-400 transition-all uppercase tracking-widest bg-red-50/50"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
-              Clear Manual Key
+              <svg className="w-3 h-3 md:w-3.5 md:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+              Key
             </button>
           )}
-
-          {!isAIStudio && !hasManualKey && (
-            <a 
-              href="https://www.doppler.com" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-[10px] font-bold font-mono text-stone-100 hover:text-white flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-800 hover:bg-black transition-all uppercase tracking-widest shadow-sm"
-              title="Manage your API keys securely with Doppler"
-            >
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
-              Secrets via Doppler
-            </a>
-          )}
           
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            className="hidden" 
-            accept=".json"
-          />
+          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
         {notebooks.map((nb) => (
           <div 
             key={nb.id} 
             onClick={() => onSelect(nb.id)} 
-            className="group relative h-64 rounded-r-2xl shadow-xl transition-all hover:-translate-y-2 cursor-pointer border-l-[12px] border-stone-800/20 p-8 flex flex-col justify-between" 
+            className="group relative h-48 md:h-64 rounded-r-2xl shadow-xl transition-all md:hover:-translate-y-1 cursor-pointer border-l-[10px] md:border-l-[12px] border-stone-800/20 p-6 md:p-8 flex flex-col justify-between active:scale-[0.98]" 
             style={{ backgroundColor: nb.color }}
           >
             <div>
-              <h3 className="text-2xl font-bold font-mono text-stone-800 break-words leading-tight">{nb.title}</h3>
-              {nb.id === 'general' && <span className="text-[9px] font-bold font-mono bg-white/40 px-2 py-0.5 rounded mt-2 inline-block">SYSTEM NOTES</span>}
+              <h3 className="text-xl md:text-2xl font-bold font-mono text-stone-800 break-words leading-tight">{nb.title}</h3>
+              {nb.id === 'general' && <span className="text-[8px] md:text-[9px] font-bold font-mono bg-white/40 px-2 py-0.5 rounded mt-2 inline-block">SYSTEM NOTES</span>}
             </div>
             
             <div className="flex justify-between items-end">
               <div className="flex flex-col">
-                <span className="text-[10px] font-mono text-stone-600">EST. {new Date(nb.timestamp).toLocaleDateString()}</span>
-                <span className="text-[9px] font-mono text-stone-500 uppercase font-bold">
+                <span className="text-[9px] md:text-[10px] font-mono text-stone-600">EST. {new Date(nb.timestamp).toLocaleDateString()}</span>
+                <span className="text-[8px] md:text-[9px] font-mono text-stone-500 uppercase font-bold">
                   {notes.filter(n => n.notebookId === nb.id).length} Records
                 </span>
               </div>
               {nb.id !== 'general' && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); onDelete(nb.id); }} 
-                  className="p-2 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-opacity"
+                  className="p-2 opacity-0 group-hover:opacity-100 md:group-hover:opacity-100 hover:text-red-600 transition-opacity"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
               )}
             </div>
-            
-            <div className="absolute top-0 bottom-0 left-[-6px] w-[2px] bg-stone-800/10"></div>
+            <div className="absolute top-0 bottom-0 left-[-5px] w-[1px] bg-stone-800/10"></div>
           </div>
         ))}
 
         {isAdding ? (
-          <div className="h-64 bg-white rounded-r-2xl border-2 border-dashed border-stone-300 p-6 flex flex-col justify-between animate-in zoom-in-95">
+          <div className="h-48 md:h-64 bg-white rounded-r-2xl border-2 border-dashed border-stone-300 p-5 md:p-6 flex flex-col justify-between animate-in fade-in duration-200">
             <input 
-              autoFocus 
               value={title} 
               onChange={e => setTitle(e.target.value)} 
               placeholder="Project Name..." 
-              className="w-full bg-transparent border-b-2 border-stone-800 font-mono text-xl focus:outline-none py-2" 
+              className="w-full bg-transparent border-b-2 border-stone-800 font-mono text-base md:text-xl focus:outline-none py-2" 
               onKeyDown={(e) => e.key === 'Enter' && title.trim() && (onAdd(title, color), setIsAdding(false), setTitle(''))}
             />
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 md:gap-2">
               {COLORS.map(c => (
                 <button 
                   key={c} 
                   onClick={() => setColor(c)} 
-                  className={`w-6 h-6 rounded-full border transition-all ${color === c ? 'ring-2 ring-stone-800 ring-offset-2' : 'border-stone-100'}`} 
+                  className={`w-5 h-5 md:w-6 md:h-6 rounded-full border transition-all ${color === c ? 'ring-2 ring-stone-800 ring-offset-2' : 'border-stone-100'}`} 
                   style={{ backgroundColor: c }} 
                 />
               ))}
@@ -181,13 +201,13 @@ export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, 
             <div className="flex gap-2">
               <button 
                 onClick={() => { if(title.trim()){ onAdd(title, color); setIsAdding(false); setTitle(''); } }} 
-                className="flex-1 py-2 bg-stone-800 text-white rounded font-mono text-xs font-bold"
+                className="flex-1 py-2 bg-stone-800 text-white rounded font-mono text-[10px] md:text-xs font-bold"
               >
                 Create
               </button>
               <button 
                 onClick={() => setIsAdding(false)} 
-                className="flex-1 py-2 text-stone-400 font-mono text-xs font-bold"
+                className="flex-1 py-2 text-stone-400 font-mono text-[10px] md:text-xs font-bold"
               >
                 Cancel
               </button>
@@ -196,10 +216,10 @@ export const NotebookShelf: React.FC<NotebookShelfProps> = ({ notebooks, notes, 
         ) : (
           <button 
             onClick={() => setIsAdding(true)} 
-            className="h-64 border-4 border-dashed border-stone-200 rounded-r-2xl flex flex-col items-center justify-center gap-2 text-stone-300 hover:border-stone-300 hover:text-stone-400 transition-all hover:bg-white"
+            className="h-48 md:h-64 border-4 border-dashed border-stone-200 rounded-r-2xl flex flex-col items-center justify-center gap-2 text-stone-300 hover:border-stone-300 hover:text-stone-400 transition-all hover:bg-white active:scale-95"
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-            <span className="font-mono text-xs font-bold uppercase tracking-widest">New Project</span>
+            <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+            <span className="font-mono text-[10px] md:text-xs font-bold uppercase tracking-widest">New Project</span>
           </button>
         )}
       </div>
