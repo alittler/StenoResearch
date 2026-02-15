@@ -15,8 +15,8 @@ const LAST_BACKUP_KEY = 'steno_last_backup_time';
 
 const DEFAULT_NOTEBOOK: Notebook = {
   id: 'general',
-  title: 'Default Ledger',
-  color: '#fef3c7',
+  title: 'Main Ledger',
+  color: '#fffef0',
   timestamp: Date.now()
 };
 
@@ -24,7 +24,7 @@ const App: React.FC = () => {
   const [notebooks, setNotebooks] = useState<Notebook[]>([DEFAULT_NOTEBOOK]);
   const [notes, setNotes] = useState<ProjectNote[]>([]);
   const [activeNotebookId, setActiveNotebookId] = useState<string>('general');
-  const [activeView, setActiveView] = useState<AppView>('shelf');
+  const [activeView, setActiveView] = useState<AppView>('steno'); // Default to notepad
   const [isInitialized, setIsInitialized] = useState(false);
   const [lastBackupTime, setLastBackupTime] = useState<number>(0);
 
@@ -127,7 +127,7 @@ const App: React.FC = () => {
   if (!isInitialized) return null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-stone-100 text-stone-900 overflow-x-hidden">
+    <div className="flex flex-col min-h-screen bg-stone-200 text-stone-900 overflow-x-hidden paper-texture">
       <Navigation 
         activeView={activeView} 
         onViewChange={setActiveView} 
@@ -135,7 +135,7 @@ const App: React.FC = () => {
         onBackToShelf={() => setActiveView('shelf')}
       />
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-8 py-4 md:py-8">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-8 py-6 md:py-10">
         {activeView === 'shelf' && (
           <NotebookShelf 
             notebooks={notebooks} 
@@ -167,7 +167,6 @@ const App: React.FC = () => {
             canUndo={historyPointer > 0}
             canRedo={historyPointer < history.length - 1}
             notebookColor={activeNotebook.color}
-            notebooks={notebooks}
           />
         )}
         {activeView === 'research' && (

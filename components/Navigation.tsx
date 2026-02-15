@@ -10,45 +10,50 @@ interface NavigationProps {
 }
 
 const Navigation: React.FC<NavigationProps> = ({ activeView, onViewChange, activeNotebookTitle, onBackToShelf }) => {
-  const tabs: { id: AppView; label: string; icon: string }[] = [
-    { id: 'steno', label: 'Notepad', icon: '📝' },
-    { id: 'visuals', label: 'Visuals', icon: '🖼️' },
-    { id: 'outlines', label: 'Outlines', icon: '📑' },
-    { id: 'research', label: 'Research', icon: '🔍' },
-    { id: 'raw', label: 'Raw Data', icon: '📄' },
+  const tabs: { id: AppView; label: string; icon: string; color: string }[] = [
+    { id: 'steno', label: 'PAD', icon: '📝', color: 'bg-stone-800' },
+    { id: 'research', label: 'SCAN', icon: '🔍', color: 'bg-blue-800' },
+    { id: 'visuals', label: 'MOOD', icon: '🖼️', color: 'bg-rose-800' },
+    { id: 'outlines', label: 'BRIEF', icon: '📑', color: 'bg-emerald-800' },
+    { id: 'raw', label: 'RAW', icon: '📄', color: 'bg-amber-800' },
   ];
 
-  if (activeView === 'shelf') {
-    return (
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-200 h-14 md:h-16 flex items-center px-4">
-        <div className="max-w-5xl mx-auto w-full flex items-center gap-3">
-          <div className="w-7 h-7 md:w-8 md:h-8 bg-stone-800 rounded-lg flex items-center justify-center text-white font-bold font-mono text-sm">S</div>
-          <span className="font-bold font-mono text-stone-800 uppercase tracking-tighter text-sm md:text-base">StenoResearch</span>
-        </div>
-      </nav>
-    );
-  }
-
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-200">
-      <div className="max-w-5xl mx-auto px-4 h-auto md:h-16 py-2 md:py-0 flex flex-col md:flex-row items-center justify-between gap-2 md:gap-4">
-        <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto overflow-hidden">
-          <button onClick={onBackToShelf} className="p-1.5 md:p-2 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-stone-800">
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
+    <nav className="sticky top-0 z-50 bg-stone-100/40 backdrop-blur-xl border-b border-stone-200/50 h-16 md:h-20 flex items-center">
+      <div className="max-w-5xl mx-auto w-full px-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={onBackToShelf} 
+            className="flex items-center gap-2 px-3 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded-lg text-[10px] font-black font-mono transition-all shadow-sm active:scale-95"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg>
+            LEDGER SHELF
           </button>
-          <span className="font-bold font-mono text-stone-800 truncate text-[10px] md:text-sm uppercase flex-1 min-w-0">
+          <div className="h-4 w-[1px] bg-stone-300"></div>
+          <span className="font-bold font-mono text-stone-800 text-sm uppercase tracking-tighter truncate max-w-[120px] md:max-w-none">
             {activeNotebookTitle}
           </span>
         </div>
-        <div className="flex gap-1 overflow-x-auto no-scrollbar py-1 w-full md:w-auto justify-center md:justify-end">
+
+        <div className="flex items-center -mb-[4px] md:-mb-0 gap-1 md:gap-2">
           {tabs.map((tab) => (
             <button 
               key={tab.id} 
               onClick={() => onViewChange(tab.id)} 
-              className={`px-2 md:px-3 py-1.5 rounded-full flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold whitespace-nowrap transition-all ${activeView === tab.id ? 'bg-stone-800 text-white shadow-lg' : 'text-stone-400 hover:bg-stone-100 hover:text-stone-600'}`}
+              className={`
+                relative px-3 md:px-5 py-2 md:py-3 rounded-t-xl transition-all flex items-center gap-2
+                ${activeView === tab.id 
+                  ? `${tab.color} text-white shadow-[-5px_0_10px_rgba(0,0,0,0.1)] -translate-y-1` 
+                  : 'bg-stone-200 text-stone-400 hover:bg-stone-300 hover:text-stone-600'
+                }
+              `}
             >
-              <span>{tab.icon}</span>
-              <span className="inline">{tab.label}</span>
+              <span className="text-xs md:text-sm">{tab.icon}</span>
+              <span className="font-black font-mono text-[9px] md:text-[11px] tracking-widest">{tab.label}</span>
+              
+              {activeView === tab.id && (
+                <div className="absolute -bottom-2 left-0 right-0 h-2 bg-inherit"></div>
+              )}
             </button>
           ))}
         </div>
