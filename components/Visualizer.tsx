@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProjectNote } from '../types';
 import { generateProjectImage } from '../services/geminiService';
 
@@ -14,6 +14,22 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasKey, setHasKey] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkKey = async () => {
+      // @ts-ignore
+      const selected = await window.aistudio.hasSelectedApiKey();
+      setHasKey(selected);
+    };
+    checkKey();
+  }, []);
+
+  const handleOpenKey = async () => {
+    // @ts-ignore
+    await window.aistudio.openSelectKey();
+    setHasKey(true); // Assume success per guidelines
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
@@ -25,12 +41,38 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
       onAddImage(prompt, imageData);
       setPrompt('');
     } catch (err: any) {
-      setError("Visual synthesis failed. Ensure API_KEY is set.");
+      if (err.message?.includes("entity was not found")) {
+        setHasKey(false);
+        setError("API Key session expired. Please reconnect.");
+      } else {
+        setError("Visual synthesis failed. Ensure your API_KEY is valid.");
+      }
       console.error(err);
     } finally {
       setIsGenerating(false);
     }
   };
+
+  if (!hasKey) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6 text-center">
+        <div className="w-20 h-20 bg-stone-200 rounded-full flex items-center justify-center text-3xl">🖼️</div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black font-mono uppercase tracking-tighter">Visualizer Offline</h2>
+          <p className="text-sm font-mono text-stone-500 max-w-xs mx-auto">
+            High-quality image generation requires an active Studio Key selection.
+          </p>
+        </div>
+        <button 
+          onClick={handleOpenKey}
+          className="bg-stone-900 text-white px-8 py-4 rounded-xl font-black font-mono uppercase text-xs hover:bg-black transition-all shadow-xl active:scale-95"
+        >
+          Connect Studio Key
+        </button>
+        <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="text-[10px] text-stone-400 underline font-mono">Billing Documentation</a>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -59,14 +101,14 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
       </div>
 
       <div className="relative min-h-[500px] p-8 md:p-14 bg-stone-200 rounded-[3rem] shadow-inner overflow-hidden border-4 border-stone-300">
-        {notes.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-6 mt-20 opacity-30">
-            <span className="text-7xl">📸</span>
-            <p className="font-mono text-xs uppercase tracking-[0.4em] font-black italic">Moodboard Empty</p>
-          </div>
-        ) : (
-          <div className="flex flex-wrap justify-center gap-10 relative z-10">
-            {notes.map((note, idx) => (
+        <div className="flex flex-wrap justify-center gap-10 relative z-10">
+          {notes.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-6 mt-20 opacity-30">
+              <span className="text-7xl">📸</span>
+              <p className="font-mono text-xs uppercase tracking-[0.4em] font-black italic">Moodboard Empty</p>
+            </div>
+          ) : (
+            notes.map((note, idx) => (
               <div 
                 key={note.id} 
                 className="group relative bg-white p-3 md:p-4 pt-4 pb-12 md:pb-16 shadow-2xl border border-stone-200 transition-all md:hover:scale-110 md:hover:rotate-0 hover:z-50 active:scale-95"
@@ -86,12 +128,11 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
                 <button onClick={() => onDeleteImage(note.id)} className="absolute bottom-3 right-3 p-2 text-stone-200 hover:text-red-500 transition-colors">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
-                {/* Decorative Pin */}
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-600 shadow-xl border-2 border-red-400"></div>
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

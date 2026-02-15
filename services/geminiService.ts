@@ -1,36 +1,25 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const getClient = () => {
-  // Directly use process.env.API_KEY as per strict requirements.
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("API_KEY_MISSING");
-  }
-  return new GoogleGenAI({ apiKey });
-};
+// Create a fresh instance for every call to ensure the latest API_KEY is used
+const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function askResearchQuestion(question: string, context: string = "") {
   try {
-    const ai = getClient();
-    const prompt = `
-      I am working on a project. 
-      Current project context from my notes: "${context}"
-      My Research Question: "${question}"
-      
-      Provide a concise, factual, and helpful answer. 
-      Use the search tool to verify facts and include citations if possible.
-    `;
-
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: prompt,
+      contents: `
+        Project Context: ${context}
+        Query: ${question}
+        Provide a concise, professional research finding. Use grounding where possible.
+      `,
       config: {
         tools: [{ googleSearch: {} }],
       },
     });
 
-    const text = response.text || "No response generated.";
+    const text = response.text || "No findings discovered.";
     const urls = response.candidates?.[0]?.groundingMetadata?.groundingChunks
       ?.map((chunk: any) => chunk.web?.uri)
       .filter((uri: string | undefined): uri is string => !!uri) || [];
@@ -44,11 +33,11 @@ export async function askResearchQuestion(question: string, context: string = ""
 
 export async function generateProjectImage(prompt: string) {
   try {
-    const ai = getClient();
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-image-preview',
       contents: {
-        parts: [{ text: `A professional concept visual for a project ledger: ${prompt}. Detailed, artistic, cinematic lighting.` }]
+        parts: [{ text: `A professional concept sketch for a project: ${prompt}. Cinematic lighting, architectural style.` }]
       },
       config: {
         imageConfig: { aspectRatio: "1:1", imageSize: "1K" },
@@ -61,24 +50,20 @@ export async function generateProjectImage(prompt: string) {
         return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
       }
     }
-    throw new Error("No image returned");
+    throw new Error("Image part not found in response.");
   } catch (error: any) {
     console.error("Image Generation Error:", error);
     throw error;
   }
 }
 
-export async function weaveProjectOutline(notepadNotes: {content: string, timestamp: number}[], researchNotes: string[]) {
+export async function weaveProjectOutline(notepadNotes: {content: string}[], researchNotes: string[]) {
   try {
-    const ai = getClient();
-    const sortedNotes = [...notepadNotes].sort((a, b) => b.timestamp - a.timestamp);
-    
+    const ai = getAI();
     const prompt = `
-      Create a highly structured project outline based on the following data.
-      User Notes (Newest first): ${sortedNotes.map(n => n.content).join('\n---\n')}
-      Secondary Research: ${researchNotes.join('\n---\n')}
-      
-      Structure the outline logically with headings, subheadings, and key takeaways.
+      Create a structured project brief/outline.
+      Input Notes: ${notepadNotes.map(n => n.content).join('\n---\n')}
+      Research: ${researchNotes.join('\n---\n')}
     `;
 
     const response = await ai.models.generateContent({
