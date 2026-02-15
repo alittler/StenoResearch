@@ -104,6 +104,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
     const newValue = inputValue.slice(0, lastHashIndex) + `#${slug} ` + textAfterCursor;
     setInputValue(newValue);
     setSuggestionState(prev => ({ ...prev, show: false }));
+    // Manual focus after selection only
     setTimeout(() => textareaRef.current?.focus(), 0);
   };
 

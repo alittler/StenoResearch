@@ -8,10 +8,9 @@ interface VisualizerProps {
   notepadContext: string;
   onAddImage: (prompt: string, imageData: string) => void;
   onDeleteImage: (id: string) => void;
-  onResetKey: () => void;
 }
 
-const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddImage, onDeleteImage, onResetKey }) => {
+const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddImage, onDeleteImage }) => {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,11 +25,8 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
       onAddImage(prompt, imageData);
       setPrompt('');
     } catch (err: any) {
-      if (err.message === 'KEY_RESET_REQUIRED') {
-        onResetKey();
-      } else {
-        setError("Failed to develop the image. Check your chemistry (connection).");
-      }
+      setError("Visual synthesis failed. Ensure API_KEY is set.");
+      console.error(err);
     } finally {
       setIsGenerating(false);
     }
@@ -38,82 +34,60 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Darkroom Controls */}
-      <div className="bg-stone-900 rounded-3xl p-8 shadow-2xl border-b-4 border-stone-950">
-        <div className="flex flex-col md:flex-row gap-6 items-center">
-          <div className="w-16 h-16 bg-red-900/30 rounded-full flex items-center justify-center border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-          </div>
-          <div className="flex-1 space-y-2">
-            <h2 className="text-2xl font-bold font-mono text-stone-100 uppercase tracking-tighter">Visualizer Studio</h2>
-            <p className="text-stone-500 text-xs font-mono italic">Generate concept visuals from your brainstorming notes.</p>
-          </div>
-        </div>
+      <div className="bg-stone-900 rounded-3xl p-8 md:p-10 shadow-2xl border-b-[8px] border-stone-950 paper-texture">
+        <h2 className="text-2xl md:text-3xl font-black font-mono text-stone-100 uppercase tracking-tighter mb-8 flex items-center gap-4">
+          CONCEPT VISUALIZER
+        </h2>
 
-        <div className="mt-8 flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-4">
           <input 
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-            placeholder="Describe the visual concept... (e.g., 'A rusty robot in a foggy forest')"
-            className="flex-1 bg-stone-800 border-stone-700 text-stone-100 rounded-xl px-4 py-3 font-mono text-sm focus:ring-1 focus:ring-stone-500 outline-none placeholder:text-stone-600"
+            placeholder="DESCRIBE THE CONCEPT..."
+            className="flex-1 bg-stone-800 border-2 border-stone-700 text-stone-100 rounded-2xl px-6 py-4 font-mono text-base focus:ring-2 focus:ring-stone-500 focus:border-transparent outline-none uppercase placeholder:text-stone-600"
           />
           <button 
             onClick={handleGenerate}
             disabled={!prompt.trim() || isGenerating}
-            className="bg-stone-100 text-stone-900 px-6 py-3 rounded-xl font-bold font-mono uppercase text-xs hover:bg-white transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+            className="bg-stone-100 text-stone-900 px-10 py-4 rounded-2xl font-black font-mono uppercase text-xs hover:bg-white transition-all disabled:opacity-50 shadow-xl active:scale-95"
           >
-            {isGenerating ? <div className="w-4 h-4 border-2 border-stone-900/30 border-t-stone-900 rounded-full animate-spin"></div> : 'Expose Image'}
+            {isGenerating ? 'Developing...' : 'Expose Concept'}
           </button>
         </div>
-        {error && <p className="text-red-400 text-[10px] font-mono mt-2 uppercase">{error}</p>}
+        {error && <p className="text-red-400 text-[10px] font-mono mt-4 uppercase font-black text-center">{error}</p>}
       </div>
 
-      {/* Mood Board Area */}
-      <div className="relative min-h-[400px] p-10 bg-stone-200 rounded-[2rem] shadow-inner overflow-hidden border-2 border-stone-300">
-        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-        
+      <div className="relative min-h-[500px] p-8 md:p-14 bg-stone-200 rounded-[3rem] shadow-inner overflow-hidden border-4 border-stone-300">
         {notes.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-4 mt-20">
-            <span className="text-6xl grayscale opacity-20">📸</span>
-            <p className="font-mono text-sm uppercase tracking-widest italic">The corkboard is empty.</p>
+          <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-6 mt-20 opacity-30">
+            <span className="text-7xl">📸</span>
+            <p className="font-mono text-xs uppercase tracking-[0.4em] font-black italic">Moodboard Empty</p>
           </div>
         ) : (
-          <div className="flex flex-wrap justify-center gap-12 relative z-10">
+          <div className="flex flex-wrap justify-center gap-10 relative z-10">
             {notes.map((note, idx) => (
               <div 
                 key={note.id} 
-                className="group relative bg-white p-3 pt-3 pb-12 shadow-xl border border-stone-200 transition-all hover:scale-110 hover:z-50 hover:shadow-2xl cursor-default"
+                className="group relative bg-white p-3 md:p-4 pt-4 pb-12 md:pb-16 shadow-2xl border border-stone-200 transition-all md:hover:scale-110 md:hover:rotate-0 hover:z-50 active:scale-95"
                 style={{ 
-                  transform: `rotate(${(idx % 2 === 0 ? 1 : -1) * (idx % 5)}deg)`,
-                  width: '260px'
+                  transform: `rotate(${(idx % 2 === 0 ? 1 : -1) * (idx % 4 + 2)}deg)`, 
+                  width: window.innerWidth < 640 ? '180px' : '300px' 
                 }}
               >
-                <div className="aspect-square bg-stone-100 overflow-hidden relative">
-                  <img src={note.metadata?.imageData} alt={note.content} className="w-full h-full object-cover grayscale-[0.2] contrast-125" />
-                  <div className="absolute inset-0 shadow-inner pointer-events-none"></div>
+                <div className="aspect-square bg-stone-100 overflow-hidden relative border border-stone-100">
+                  <img src={note.metadata?.imageData} alt={note.content} className="w-full h-full object-cover grayscale-[0.1] contrast-125" />
                 </div>
-                
-                <div className="mt-4 px-2">
-                  <p className="font-handwriting text-stone-800 text-xl leading-tight line-clamp-2">
+                <div className="mt-4 md:mt-6 px-1">
+                  <p className="font-handwriting text-stone-800 text-lg md:text-2xl leading-none line-clamp-2 italic">
                     {note.content}
                   </p>
                 </div>
-
-                <div className="absolute bottom-2 left-0 right-0 px-4 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-[9px] font-mono text-stone-400">{new Date(note.timestamp).toLocaleDateString()}</span>
-                  <button 
-                    onClick={() => onDeleteImage(note.id)}
-                    className="p-1.5 text-red-300 hover:text-red-500 transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
-                  </button>
-                </div>
-
+                <button onClick={() => onDeleteImage(note.id)} className="absolute bottom-3 right-3 p-2 text-stone-200 hover:text-red-500 transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
                 {/* Decorative Pin */}
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-600 shadow-md flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-400/50"></div>
-                </div>
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-600 shadow-xl border-2 border-red-400"></div>
               </div>
             ))}
           </div>
