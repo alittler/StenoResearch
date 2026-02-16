@@ -1,27 +1,42 @@
 
-export type NoteType = 'quick' | 'research' | 'raw' | 'outline' | 'image';
+export type NoteCategory = 'MANUSCRIPT' | 'CHARACTER' | 'WORLD-BUILDING' | 'RESEARCH' | 'BRAINSTORM' | 'UNCLASSIFIED';
+
+export type NoteType = 'ledger' | 'research' | 'outline' | 'image';
+
+export type AppView = 'shelf' | 'dashboard' | 'steno' | 'research' | 'canvas' | 'vault' | 'outlines' | 'raw';
+
+export interface NoteLink {
+  url: string;
+  description: string;
+}
 
 export interface Notebook {
   id: string;
   title: string;
-  description?: string;
   color: string;
-  timestamp: number;
+  createdAt?: number;
+  isArchived?: boolean;
 }
 
 export interface ProjectNote {
   id: string;
-  notebookId: string;
   content: string;
-  type: NoteType;
   timestamp: number;
-  question?: string;
+  title?: string;
+  category?: NoteCategory;
+  type?: NoteType;
   tags?: string[];
+  links?: NoteLink[];
+  is_priority?: boolean;
+  raw_source_id?: string;
+  question?: string;
+  notebookId?: string;
   metadata?: {
     urls?: string[];
-    version?: number;
-    imageData?: string; // Base64 image data
+    imageData?: string;
+    canvasX?: number;
+    canvasY?: number;
   };
 }
 
-export type AppView = 'shelf' | 'steno' | 'research' | 'raw' | 'outlines' | 'visuals';
+export type AppMode = 'ledger' | 'architect';

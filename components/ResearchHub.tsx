@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { ProjectNote } from '../types';
 import { askResearchQuestion } from '../services/geminiService';
 
@@ -18,6 +18,9 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
+  
+  // Note: AbortController is for simulating the stop of a long-running AI task UI-side
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleAsk = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,15 +28,34 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
 
     setIsLoading(true);
     setError(null);
+    abortControllerRef.current = new AbortController();
+
     try {
       const { text, urls } = await askResearchQuestion(question, context);
-      onAddResearch(question, text, urls);
-      setQuestion('');
+      
+      // If the controller hasn't been aborted, add the note
+      if (!abortControllerRef.current?.signal.aborted) {
+        onAddResearch(question, text, urls);
+        setQuestion('');
+      }
     } catch (err: any) {
-      setError("AI Service connection failed. Check your API_KEY environment.");
-      console.error(err);
+      if (err.name === 'AbortError') {
+        console.log('Research operation aborted by user.');
+      } else {
+        setError("Scanning failed. Verify your connection or API configuration.");
+        console.error(err);
+      }
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsLoading(false);
+      setError("Research operation halted.");
     }
   };
 
@@ -69,8 +91,21 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
             placeholder="ENTER RESEARCH PARAMETERS..." 
             className="w-full p-6 rounded-2xl bg-stone-900 border-2 border-stone-700 text-stone-100 font-mono uppercase placeholder:text-stone-600 focus:border-stone-500 outline-none transition-all min-h-[140px] resize-none text-base" 
           />
-          <div className="flex justify-end">
-            <button type="submit" disabled={!question.trim() || isLoading} className="w-full md:w-auto px-10 py-5 bg-stone-100 text-stone-900 rounded-xl font-black font-mono uppercase text-xs hover:bg-white transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl active:scale-95">
+          <div className="flex justify-end gap-3">
+            {isLoading && (
+              <button 
+                type="button"
+                onClick={handleStop}
+                className="px-6 py-5 bg-red-600/20 text-red-400 border border-red-500/30 rounded-xl font-black font-mono uppercase text-xs hover:bg-red-600 hover:text-white transition-all shadow-xl active:scale-95"
+              >
+                Stop Scan
+              </button>
+            )}
+            <button 
+              type="submit" 
+              disabled={!question.trim() || isLoading} 
+              className="px-10 py-5 bg-stone-100 text-stone-900 rounded-xl font-black font-mono uppercase text-xs hover:bg-white transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl active:scale-95"
+            >
               {isLoading ? (
                 <>
                   <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -95,7 +130,7 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
             const isExpanded = expandedNotes[note.id];
             const displayContent = isLong && !isExpanded ? note.content.slice(0, READ_MORE_THRESHOLD) + "..." : note.content;
             return (
-              <div key={note.id} className="group relative bg-[#fffef0] rounded-lg shadow-2xl overflow-hidden flex flex-col paper-texture border-b-4 border-stone-300 transform transition-transform md:hover:-rotate-1">
+              <div key={note.id} className="group relative bg-[#fffef0] rounded-lg shadow-2xl overflow-hidden flex flex-col paper-texture border-b-4 border-stone-300 transform transition-all hover:translate-y-[-4px]">
                 <div className="p-5 border-b border-stone-200/50 bg-stone-100/50 flex justify-between items-start">
                   <h3 className="font-black text-stone-800 text-[10px] font-mono uppercase tracking-widest flex-1">{note.question}</h3>
                   <button onClick={() => onDeleteNote(note.id)} className="text-stone-300 hover:text-red-500 transition-colors ml-4 p-1">

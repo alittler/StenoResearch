@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ProjectNote, Notebook } from '../types';
+import { ProjectNote } from '../types';
+import { marked } from 'marked';
 
 interface StenoPadProps {
   notes: ProjectNote[];
@@ -11,19 +12,28 @@ interface StenoPadProps {
   onRedo?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
-  notebookColor?: string;
-  notebooks?: Notebook[];
 }
+
+const CATEGORY_COLORS: Record<string, string> = {
+  MANUSCRIPT: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  CHARACTER: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  'WORLD-BUILDING': 'bg-amber-100 text-amber-700 border-amber-200',
+  RESEARCH: 'bg-blue-100 text-blue-700 border-blue-200',
+  BRAINSTORM: 'bg-rose-100 text-rose-700 border-rose-200',
+  UNCLASSIFIED: 'bg-slate-100 text-slate-700 border-slate-200'
+};
 
 const StenoPad: React.FC<StenoPadProps> = ({ 
   notes, 
   onAddNote, 
   onUpdateNote, 
   onDeleteNote,
-  notebookColor
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
 }) => {
   const [inputValue, setInputValue] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -40,7 +50,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleAdd();
@@ -51,110 +61,97 @@ const StenoPad: React.FC<StenoPadProps> = ({
     [...notes].sort((a, b) => b.timestamp - a.timestamp)
   , [notes]);
 
+  const renderMarkdown = (content: string) => {
+    return { __html: marked.parse(content, { breaks: true, gfm: true }) };
+  };
+
   return (
-    <div className="relative w-full max-w-2xl mx-auto flex flex-col min-h-[85vh] animate-slide-in mb-12">
-      {/* Metallic Spiral Rings */}
-      <div className="absolute -top-6 left-0 right-0 flex justify-between px-10 z-40 pointer-events-none">
-        {[...Array(16)].map((_, i) => (
-          <div key={i} className="flex flex-col items-center">
-            <div className="w-3.5 h-10 bg-gradient-to-r from-stone-500 via-stone-200 to-stone-500 rounded-full border border-stone-600 shadow-lg"></div>
-          </div>
-        ))}
+    <div className="flex flex-col gap-8 animate-fade-in max-w-4xl mx-auto w-full">
+      <div className="sticky top-[80px] z-30 flex justify-between items-center mb-4">
+        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Chronological Feed</h3>
+        <div className="flex gap-2">
+          <button onClick={onUndo} disabled={!canUndo} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 disabled:opacity-20 transition-all">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+          </button>
+          <button onClick={onRedo} disabled={!canRedo} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 disabled:opacity-20 transition-all">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 10h-10a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6"></path></svg>
+          </button>
+        </div>
       </div>
 
-      {/* The Pad Body */}
-      <div className="flex-1 rounded-b-xl shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative overflow-hidden flex flex-col border-t-[16px] border-stone-400 paper-texture">
-        {/* Shadow Overlay for Binding */}
-        <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-black/5 to-transparent z-10 pointer-events-none"></div>
-
-        {/* Authentic Ruled Lines */}
-        <div className="absolute inset-0 pointer-events-none opacity-20 z-0" 
-             style={{ 
-               backgroundImage: `linear-gradient(#4a90e2 1px, transparent 1px)`, 
-               backgroundSize: '100% 2.25rem',
-               backgroundPosition: '0 1.125rem'
-             }}>
-        </div>
-
-        {/* Double Red Margin Line */}
-        <div className="absolute left-[4rem] md:left-[5rem] top-0 bottom-0 w-[1px] bg-red-400 opacity-40 z-10"></div>
-        <div className="absolute left-[4.2rem] md:left-[5.2rem] top-0 bottom-0 w-[1px] bg-red-400 opacity-20 z-10"></div>
-
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto px-10 md:px-20 pt-16 pb-48 z-20 relative no-scrollbar">
-          {notes.length === 0 ? (
-            <div className="mt-32 text-center select-none">
-              <span className="text-6xl opacity-10 block mb-6">🖋️</span>
-              <p className="text-stone-300 font-mono text-[9px] uppercase tracking-[0.5em] font-black">Ready for recording</p>
-            </div>
-          ) : (
-            <div className="space-y-0">
-              {sortedNotes.map((note) => (
-                <div key={note.id} className="group relative border-b border-stone-200/50 py-3">
-                  <div className="flex items-start">
-                    <div className="flex-1 min-w-0">
-                      {editingId === note.id ? (
-                        <textarea
-                          autoFocus
-                          className="w-full bg-transparent border-none focus:ring-0 font-handwriting text-3xl text-blue-800 p-0 resize-none h-24"
-                          defaultValue={note.content}
-                          onBlur={(e) => {
-                            onUpdateNote(note.id, e.target.value);
-                            setEditingId(null);
-                          }}
-                        />
-                      ) : (
-                        <p 
-                          className="font-handwriting text-3xl md:text-4xl text-stone-800 leading-[2.25rem] cursor-text whitespace-pre-wrap break-words"
-                          onClick={() => setEditingId(note.id)}
-                        >
-                          {note.content}
-                        </p>
-                      )}
-                      <div className="mt-2 flex items-center gap-4 opacity-40 group-hover:opacity-100 transition-opacity">
-                        <span className="text-[9px] font-mono text-stone-500 font-bold uppercase">
-                          {new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => onDeleteNote(note.id)} 
-                      className="opacity-0 group-hover:opacity-100 p-2 text-stone-200 hover:text-red-500 transition-opacity ml-4"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
+      <div className="space-y-4">
+        {sortedNotes.length === 0 ? (
+          <div className="py-24 text-center text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
+            <p className="text-sm">No records found. Start typing below.</p>
+          </div>
+        ) : (
+          sortedNotes.map((note) => (
+            <div key={note.id} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {note.category && (
+                      <span className={`${CATEGORY_COLORS[note.category]} border px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider`}>
+                        {note.category}
+                      </span>
+                    )}
+                    {note.is_priority && (
+                      <span className="bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+                        Priority
+                      </span>
+                    )}
+                    <span className="text-[10px] text-slate-400 font-medium">{new Date(note.timestamp).toLocaleString()}</span>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
-        {/* Input Dock */}
-        <div className="absolute bottom-0 left-0 right-0 bg-white/40 backdrop-blur-md border-t border-stone-200/50 p-6 md:p-8 z-40">
-          <div className="flex items-end gap-6 max-w-xl mx-auto">
-            <textarea 
-              ref={textareaRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="What did you find?"
-              className="flex-1 bg-white/90 rounded-2xl px-6 py-5 font-handwriting text-3xl text-stone-700 placeholder:text-stone-300 border-none focus:ring-4 focus:ring-stone-200 outline-none shadow-xl transition-all"
-              rows={1}
-            />
-            <button 
-              onClick={handleAdd}
-              disabled={!inputValue.trim()}
-              className="px-10 py-5 bg-stone-900 text-white rounded-2xl text-[10px] font-black font-mono uppercase hover:bg-black transition-all active:scale-95 disabled:opacity-10 shadow-2xl"
-            >
-              Post
-            </button>
-          </div>
+                  <div 
+                    className="text-slate-700 leading-relaxed text-base prose prose-slate max-w-none"
+                    dangerouslySetInnerHTML={renderMarkdown(note.content)}
+                  />
+
+                  {note.links && note.links.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-slate-50 grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {note.links.map((link, idx) => (
+                        <a key={idx} href={link.url} target="_blank" className="p-3 bg-slate-50 border border-slate-100 rounded-lg hover:border-slate-300 transition-colors group/link">
+                          <p className="text-[10px] text-blue-600 font-bold truncate">{link.url}</p>
+                          <p className="text-[10px] text-slate-500 mt-1 italic line-clamp-1">{link.description}</p>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onDeleteNote(note.id); }} 
+                  className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all rounded-lg"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="sticky bottom-8 mt-12 bg-white/80 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-slate-200 max-w-3xl mx-auto w-full">
+        <div className="flex items-end gap-3">
+          <textarea 
+            ref={textareaRef}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            placeholder="Write a new note... (Enter to commit)"
+            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-5 py-4 text-slate-800 outline-none focus:ring-2 focus:ring-slate-900 transition-all h-14 min-h-[56px] resize-none"
+            rows={1}
+          />
+          <button 
+            onClick={handleAdd}
+            disabled={!inputValue.trim()}
+            className="h-14 px-8 bg-slate-900 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-black transition-all disabled:opacity-20 shadow-lg"
+          >
+            Add
+          </button>
         </div>
       </div>
-      
-      {/* Visual Depth Cardboard Underlay */}
-      <div className="absolute inset-0 -z-10 bg-stone-800/20 translate-x-5 translate-y-5 rounded-xl"></div>
     </div>
   );
 };
