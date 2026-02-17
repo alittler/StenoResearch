@@ -4,6 +4,9 @@ import { ProjectNote, AppMode, Notebook } from './types';
 import StenoPad from './components/StenoPad';
 import KnowledgeArchitect from './components/KnowledgeArchitect';
 import NotebookShelf from './components/NotebookShelf';
+import ResearchHub from './components/ResearchHub';
+import RawTextEditor from './components/RawTextEditor';
+import { summarizePrompt } from './services/geminiService';
 
 const STORAGE_KEY_NOTES = 'steno_notes_v6';
 const STORAGE_KEY_BOOKS = 'steno_books_v6';
@@ -11,8 +14,9 @@ const STORAGE_KEY_BOOKS = 'steno_books_v6';
 const DEFAULT_NOTEBOOK: Notebook = {
   id: 'general',
   title: 'Main Project',
-  color: '#3b82f6', // blue-500
+  color: '#3b82f6',
   createdAt: Date.now(),
+  coreConcept: '',
 };
 
 const getHashtag = (title: string) => `#${title.trim().replace(/\s+/g, '_')}`;
@@ -27,6 +31,7 @@ const App: React.FC = () => {
   const [past, setPast] = useState<ProjectNote[][]>([]);
   const [future, setFuture] = useState<ProjectNote[][]>([]);
 
+  // Initialize
   useEffect(() => {
     const savedBooks = localStorage.getItem(STORAGE_KEY_BOOKS);
     const savedNotes = localStorage.getItem(STORAGE_KEY_NOTES);
@@ -52,10 +57,22 @@ const App: React.FC = () => {
     setIsInitialized(true);
   }, []);
 
+  // Immediate Save on Change
   useEffect(() => {
     if (!isInitialized) return;
     localStorage.setItem(STORAGE_KEY_BOOKS, JSON.stringify(notebooks));
     localStorage.setItem(STORAGE_KEY_NOTES, JSON.stringify(notes));
+  }, [notes, notebooks, isInitialized]);
+
+  // Periodic Auto-save (Every 30 seconds)
+  useEffect(() => {
+    if (!isInitialized) return;
+    const interval = setInterval(() => {
+      localStorage.setItem(STORAGE_KEY_BOOKS, JSON.stringify(notebooks));
+      localStorage.setItem(STORAGE_KEY_NOTES, JSON.stringify(notes));
+      console.log('Project Auto-saved to storage.');
+    }, 30000);
+    return () => clearInterval(interval);
   }, [notes, notebooks, isInitialized]);
 
   const activeNotebook = useMemo(() => 
@@ -63,15 +80,27 @@ const App: React.FC = () => {
   , [activeNotebookId, notebooks]);
 
   const projectNotes = useMemo(() => 
+    notes.filter(n => n.notebookId === activeNotebookId && (!n.type || n.type === 'ledger'))
+  , [notes, activeNotebookId]);
+
+  const researchNotes = useMemo(() => 
+    notes.filter(n => n.notebookId === activeNotebookId && n.type === 'research')
+  , [notes, activeNotebookId]);
+
+  const allActiveNotebookNotes = useMemo(() => 
     notes.filter(n => n.notebookId === activeNotebookId)
   , [notes, activeNotebookId]);
+
+  const projectContext = useMemo(() => 
+    projectNotes.map(n => n.content).join('\n\n')
+  , [projectNotes]);
 
   const pushToHistory = useCallback((currentNotes: ProjectNote[]) => {
     setPast(prev => [...prev.slice(-49), currentNotes]);
     setFuture([]);
   }, []);
 
-  const addNote = useCallback((content: string) => {
+  const addNote = useCallback((content: string, metadata?: any) => {
     if (!activeNotebookId) return;
     setNotes(prev => {
       pushToHistory(prev);
@@ -80,11 +109,37 @@ const App: React.FC = () => {
         content,
         timestamp: Date.now(),
         notebookId: activeNotebookId,
-        tags: [getHashtag(activeNotebook?.title || 'General')]
+        type: 'ledger',
+        tags: [getHashtag(activeNotebook?.title || 'General')],
+        metadata: metadata || {}
       };
       return [newNote, ...prev];
     });
   }, [pushToHistory, activeNotebookId, activeNotebook]);
+
+  const addResearchNote = useCallback((question: string, content: string, urls: string[]) => {
+    if (!activeNotebookId) return;
+    setNotes(prev => {
+      pushToHistory(prev);
+      const newNote: ProjectNote = {
+        id: crypto.randomUUID(),
+        question,
+        content,
+        timestamp: Date.now(),
+        notebookId: activeNotebookId,
+        type: 'research',
+        metadata: { urls },
+        tags: [getHashtag(activeNotebook?.title || 'General'), '#research']
+      };
+      return [newNote, ...prev];
+    });
+  }, [pushToHistory, activeNotebookId, activeNotebook]);
+
+  const pinResearchToNotes = useCallback(async (researchNote: ProjectNote) => {
+    const summary = await summarizePrompt(researchNote.question || "Unknown Inquiry");
+    const pinnedContent = `📌 RESEARCH PIN: ${summary}\n\n${researchNote.content}${researchNote.metadata?.urls?.length ? '\n\nSources:\n' + researchNote.metadata.urls.join('\n') : ''}`;
+    addNote(pinnedContent);
+  }, [addNote]);
 
   const addShreddedNotes = useCallback((newNotes: ProjectNote[]) => {
     if (!activeNotebookId) return;
@@ -92,13 +147,13 @@ const App: React.FC = () => {
     const notesWithId = newNotes.map(n => ({ 
       ...n, 
       notebookId: activeNotebookId,
+      type: 'ledger' as const,
       tags: Array.from(new Set([...(n.tags || []), htag]))
     }));
     setNotes(prev => {
       pushToHistory(prev);
       return [...notesWithId, ...prev];
     });
-    setMode('ledger');
   }, [pushToHistory, activeNotebookId, activeNotebook]);
 
   const deleteNote = useCallback((id: string) => {
@@ -108,12 +163,13 @@ const App: React.FC = () => {
     });
   }, [pushToHistory]);
 
-  const updateNote = useCallback((id: string, content: string) => {
+  const updateNote = useCallback((id: string, updates: Partial<ProjectNote>) => {
     setNotes(prev => {
+      // Allow undoing of edits by pushing current state to history
       pushToHistory(prev);
       return prev.map(n => {
         if (n.id === id) {
-          return { ...n, content, timestamp: Date.now() };
+          return { ...n, ...updates };
         }
         return n;
       });
@@ -126,6 +182,7 @@ const App: React.FC = () => {
       title,
       color,
       createdAt: Date.now(),
+      coreConcept: '',
     };
     setNotebooks(prev => [...prev, newBook]);
   };
@@ -167,7 +224,7 @@ const App: React.FC = () => {
 
   if (!activeNotebookId) {
     return (
-      <div className="min-h-screen bg-white text-slate-900">
+      <div className="min-h-screen bg-slate-50 text-slate-900">
         <NotebookShelf 
           notebooks={notebooks} 
           notes={notes}
@@ -184,7 +241,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      <nav className="sticky top-0 z-40 bg-white border-b border-slate-200 px-6 h-16 flex items-center justify-between">
+      <nav className="sticky top-0 z-40 bg-white border-b border-slate-200 px-6 h-16 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setActiveNotebookId(null)}
@@ -193,39 +250,52 @@ const App: React.FC = () => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
           </button>
           <div className="h-4 w-[1px] bg-slate-200"></div>
-          <h2 className="font-semibold text-slate-800 tracking-tight">{activeNotebook?.title}</h2>
+          <h2 className="font-black text-slate-900 uppercase tracking-widest text-[10px]">{activeNotebook?.title}</h2>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
-          <button 
-            onClick={() => setMode('ledger')}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${mode === 'ledger' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Notes
-          </button>
-          <button 
-            onClick={() => setMode('architect')}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${mode === 'architect' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Architect
-          </button>
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+          {(['ledger', 'research', 'architect', 'raw'] as AppMode[]).map((m) => (
+            <button 
+              key={m}
+              onClick={() => setMode(m)}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${mode === m ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400 hover:text-slate-700'}`}
+            >
+              {m}
+            </button>
+          ))}
         </div>
       </nav>
 
-      <main className="flex-1 max-w-5xl w-full mx-auto p-8">
-        {mode === 'ledger' ? (
+      <main className="flex-1 max-w-6xl w-full mx-auto p-8">
+        {mode === 'ledger' && (
           <StenoPad 
             notes={projectNotes} 
             onAddNote={addNote} 
-            onUpdateNote={updateNote}
+            onUpdateNote={(id, content) => updateNote(id, { content })}
             onDeleteNote={deleteNote}
             onUndo={undo}
             onRedo={redo}
             canUndo={past.length > 0}
             canRedo={future.length > 0}
           />
-        ) : (
-          <KnowledgeArchitect onShredded={addShreddedNotes} />
+        )}
+        {mode === 'research' && (
+          <ResearchHub 
+            notes={researchNotes}
+            context={projectContext}
+            onAddResearch={addResearchNote}
+            onDeleteNote={deleteNote}
+            onPinNote={pinResearchToNotes}
+          />
+        )}
+        {mode === 'architect' && (
+          <KnowledgeArchitect onShredded={addShreddedNotes} onAddRawNote={addNote} />
+        )}
+        {mode === 'raw' && (
+          <RawTextEditor 
+            allNotes={allActiveNotebookNotes} 
+            notebookTitle={activeNotebook?.title || 'Unknown'} 
+          />
         )}
       </main>
     </div>

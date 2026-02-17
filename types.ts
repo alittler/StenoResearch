@@ -1,9 +1,7 @@
 
 export type NoteCategory = 'MANUSCRIPT' | 'CHARACTER' | 'WORLD-BUILDING' | 'RESEARCH' | 'BRAINSTORM' | 'UNCLASSIFIED';
 
-export type NoteType = 'ledger' | 'research' | 'outline' | 'image';
-
-export type AppView = 'shelf' | 'dashboard' | 'steno' | 'research' | 'canvas' | 'vault' | 'outlines' | 'raw';
+export type NoteType = 'ledger' | 'research' | 'outline' | 'image' | 'blueprint_pillar';
 
 export interface NoteLink {
   url: string;
@@ -16,6 +14,11 @@ export interface Notebook {
   color: string;
   createdAt?: number;
   isArchived?: boolean;
+  coreConcept?: string;
+  metadata?: {
+    canvasX?: number;
+    canvasY?: number;
+  };
 }
 
 export interface ProjectNote {
@@ -36,7 +39,11 @@ export interface ProjectNote {
     imageData?: string;
     canvasX?: number;
     canvasY?: number;
+    alignmentScore?: number;
   };
 }
 
-export type AppMode = 'ledger' | 'architect';
+export type AppMode = 'ledger' | 'architect' | 'research' | 'raw';
+
+// Added missing AppView type for Navigation and Dashboard components
+export type AppView = 'shelf' | 'dashboard' | 'steno' | 'research' | 'vault' | 'outlines' | 'raw';

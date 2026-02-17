@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Ledger | Minimalist Research</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <style>
         body { 
           font-family: 'Inter', sans-serif; 
@@ -19,6 +19,7 @@
           padding: 0;
         }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .font-serif { font-family: 'Crimson Pro', serif; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -27,7 +28,33 @@
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        .paper-texture {
+          background-image: 
+            linear-gradient(rgba(0,0,0,0.015) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,0.015) 1px, transparent 1px);
+          background-size: 20px 20px;
+        }
+
+        /* Custom Markdown Styles for the StenoPad */
+        .prose-steno {
+          color: #1e293b;
+          font-family: 'Crimson Pro', serif;
+          font-style: italic;
+          font-size: 1.25rem;
+          line-height: 1.75;
+        }
+        .prose-steno h1, .prose-steno h2, .prose-steno h3 {
+          font-family: 'Inter', sans-serif;
+          font-style: normal;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: -0.025em;
+          margin-top: 1.5em;
+        }
+        .prose-steno strong { color: #000; font-weight: 800; }
+        .prose-steno code { font-family: 'JetBrains Mono', monospace; font-style: normal; background: #f1f5f9; padding: 0.2em 0.4em; border-radius: 4px; font-size: 0.9em; }
     </style>
 <script type="importmap">
 {

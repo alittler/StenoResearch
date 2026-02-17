@@ -77,11 +77,7 @@ const Dashboard: React.FC<DashboardProps> = ({ notebook, notes, onNavigate, onAd
 
         <section className="space-y-4">
           <h3 className="text-sm font-black font-mono text-stone-400 uppercase tracking-widest">Workspace Actions</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => onNavigate('canvas')} className="p-8 bg-blue-600/10 border border-blue-500/20 rounded-2xl hover:bg-blue-600/20 transition-all text-center group">
-              <span className="text-3xl block mb-2 group-hover:scale-110 transition-transform">🗺️</span>
-              <span className="text-[10px] font-black font-mono text-blue-400 uppercase">Map Relationships</span>
-            </button>
+          <div className="grid grid-cols-1 gap-4">
             <button onClick={() => onNavigate('outlines')} className="p-8 bg-purple-600/10 border border-purple-500/20 rounded-2xl hover:bg-purple-600/20 transition-all text-center group">
               <span className="text-3xl block mb-2 group-hover:scale-110 transition-transform">📑</span>
               <span className="text-[10px] font-black font-mono text-purple-400 uppercase">Synthesize Brief</span>

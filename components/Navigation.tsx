@@ -30,7 +30,6 @@ const Navigation: React.FC<NavigationProps> = ({
     { id: 'dashboard', label: 'Cmd', icon: '🏠' },
     { id: 'steno', label: 'Pad', icon: '📝' },
     { id: 'research', label: 'Scan', icon: '🔍' },
-    { id: 'canvas', label: 'Map', icon: '🗺️' },
     { id: 'vault', label: 'Vault', icon: '🗄️' },
     { id: 'outlines', label: 'Brief', icon: '📑' },
     { id: 'raw', label: 'Raw', icon: '📄' },

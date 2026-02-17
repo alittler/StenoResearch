@@ -2,8 +2,61 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 /**
+ * Analyzes how well a collection of notes supports the core concept.
+ */
+export async function auditConceptAlignment(concept: string, notes: { id: string, content: string }[]) {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const notesContext = notes.map(n => `ID:${n.id} | Content:${n.content}`).join('\n---\n');
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `
+        CORE CONCEPT: ${concept}
+        
+        NOTES TO AUDIT:
+        ${notesContext}
+      `,
+      config: {
+        systemInstruction: `
+          You are a Content Auditor. Evaluate how each note relates to the Core Concept.
+          Assign an alignmentScore (0-100) and a brief justification.
+          Identify "Gaps" (areas the concept claims to cover but notes don't support) and "Drift" (notes that don't fit the concept).
+          Return valid JSON.
+        `,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            noteAlignments: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  score: { type: Type.NUMBER },
+                  reasoning: { type: Type.STRING }
+                },
+                required: ["id", "score", "reasoning"]
+              }
+            },
+            overallAnalysis: { type: Type.STRING },
+            gaps: { type: Type.ARRAY, items: { type: Type.STRING } }
+          },
+          required: ["noteAlignments", "overallAnalysis", "gaps"]
+        }
+      },
+    });
+
+    return JSON.parse(response.text.trim());
+  } catch (error: any) {
+    console.error("Audit Error:", error);
+    throw error;
+  }
+}
+
+/**
  * Shreds a "Wall of Text" into structured atomic notes using Gemini 3 Pro.
- * Adheres to strict classification logic and the "Raw" rule for content preservation.
  */
 export async function shredWallOfText(text: string) {
   try {
@@ -14,30 +67,17 @@ export async function shredWallOfText(text: string) {
       contents: text,
       config: {
         systemInstruction: `
-          As the "Knowledge Architect", your goal is to ingest a "Wall of Text" (LLM chats, research, jots, or images-to-text) and transform it into an organized, relational database structure.
+          As the "Knowledge Architect", transform the "Wall of Text" into structured notes.
+          OMIT ALL CONVERSATIONAL FILLER, PREFACES, OR INTRODUCTORY REMARKS. Start directly with the data.
 
-          ### 1. ANALYSIS PHASE
-          - Identify distinct "Atomic Notes" (singular thoughts, facts, or scenes).
-          - Detect specific Project Tags (e.g., #BookTitle, #CharacterName).
-          - Extract all Referenced URLs and provide a 1-sentence context for each.
-          - Identify "Entities" (People, Places, Technical Concepts).
+          ### CLASSIFICATION LOGIC
+          - MANUSCRIPT: Actual prose.
+          - CHARACTER: Descriptions or arcs.
+          - WORLD-BUILDING: Lore or rules.
+          - RESEARCH: Facts or links.
+          - BRAINSTORM: Loose ideas.
 
-          ### 2. CLASSIFICATION LOGIC
-          Assign every "shredded" note to one of these categories:
-          - MANUSCRIPT: Actual prose for a book.
-          - CHARACTER: Descriptions, arcs, or dialogue notes.
-          - WORLD-BUILDING: Lore, maps, or rules of the setting.
-          - RESEARCH: Facts, data, or external links.
-          - BRAINSTORM: Loose ideas or "future-me" notes.
-
-          ### 3. THE "RAW" RULE
-          Never summarize the core content so much that detail is lost. Preserve the "voice" of the original text while stripping out LLM filler (e.g., "Certainly! Here is...").
-
-          ### 4. OUTPUT FORMAT
           Return a strict JSON array.
-
-          ### 5. CHRONOLOGICAL AUTHORITY
-          If the input text implies updates or changes to existing knowledge, the information appearing later in the sequence (more recent) has absolute authority and overrides previous descriptions.
         `,
         responseMimeType: "application/json",
         responseSchema: {
@@ -45,27 +85,14 @@ export async function shredWallOfText(text: string) {
           items: {
             type: Type.OBJECT,
             properties: {
-              raw_source_id: { 
-                type: Type.STRING, 
-                description: "A unique hash or ID for the specific chunk of source text." 
-              },
-              title: { 
-                type: Type.STRING, 
-                description: "A concise 5-8 word summary of the atomic note." 
-              },
-              content: { 
-                type: Type.STRING, 
-                description: "The cleaned, formatted Markdown text preserving original detail." 
-              },
+              raw_source_id: { type: Type.STRING },
+              title: { type: Type.STRING },
+              content: { type: Type.STRING },
               category: { 
                 type: Type.STRING,
                 enum: ['MANUSCRIPT', 'CHARACTER', 'WORLD-BUILDING', 'RESEARCH', 'BRAINSTORM']
               },
-              tags: { 
-                type: Type.ARRAY, 
-                items: { type: Type.STRING },
-                description: "Detected #tags without the hash symbol."
-              },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
               links: {
                 type: Type.ARRAY,
                 items: {
@@ -77,10 +104,7 @@ export async function shredWallOfText(text: string) {
                   required: ["url", "description"]
                 }
               },
-              is_priority: { 
-                type: Type.BOOLEAN,
-                description: "True if the text contains action items or urgent ideas."
-              }
+              is_priority: { type: Type.BOOLEAN }
             },
             required: ["raw_source_id", "title", "content", "category", "tags", "links", "is_priority"]
           }
@@ -88,8 +112,7 @@ export async function shredWallOfText(text: string) {
       },
     });
 
-    const jsonStr = response.text.trim();
-    return JSON.parse(jsonStr);
+    return JSON.parse(response.text.trim());
   } catch (error: any) {
     console.error("Architect Error:", error);
     throw error;
@@ -97,15 +120,46 @@ export async function shredWallOfText(text: string) {
 }
 
 /**
- * Performs research using Google Search grounding for recent and up-to-date information.
+ * Summarizes a long question/prompt into a concise one-line heading.
  */
-export async function askResearchQuestion(question: string, context: string) {
+export async function summarizePrompt(prompt: string) {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Context from my existing project notes:\n${context}\n\nResearch Question: ${question}`,
+      contents: `Summarize this research prompt into a concise one-line title (max 10 words). Omit all prefaces.\n\nPrompt: ${prompt}`,
+    });
+    return response.text.trim().replace(/^["']|["']$/g, '');
+  } catch (error) {
+    console.error("Summarization Error:", error);
+    return prompt.slice(0, 50) + "...";
+  }
+}
+
+/**
+ * Performs research using Google Search grounding.
+ */
+export async function askResearchQuestion(question: string, context: string, imageData?: string) {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const parts: any[] = [
+      { text: `Context from my existing project notes:\n${context}\n\nResearch Question: ${question}` }
+    ];
+
+    if (imageData) {
+      parts.push({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageData.split(',')[1]
+        }
+      });
+    }
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: { parts },
       config: {
+        systemInstruction: "You are a professional researcher. OMIT ALL PREFACES, INTRODUCTIONS, AND CONVERSATIONAL FILLER. Start directly with the factual information. Be concise and authoritative.",
         tools: [{ googleSearch: {} }],
       },
     });
@@ -138,9 +192,9 @@ export async function weaveProjectOutline(notepadNotes: { content: string; times
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: `Synthesize this into a Markdown outline.\n\nNOTES:\n${notesContext}\n\nRESEARCH:\n${researchContext}`,
+      contents: `Synthesize this into a Markdown outline. OMIT ALL PREFACES.\n\nNOTES:\n${notesContext}\n\nRESEARCH:\n${researchContext}`,
       config: {
-        systemInstruction: "You are a master architect. Build a logical hierarchy. CRITICAL AUTHORITY RULE: When information conflicts or overlaps, the notes with the most recent timestamps have absolute authority and override older ones. Prioritize recent entries in the structural layout.",
+        systemInstruction: "You are a master architect. Build a logical hierarchy. CRITICAL AUTHORITY RULE: Most recent entries have absolute authority. Omit conversational introductions.",
       },
     });
 
