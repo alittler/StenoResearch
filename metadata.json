@@ -1,5 +1,8 @@
 {
-  "name": "StenoResearch",
-  "description": "A multi-notebook project management tool with a nostalgic stenopad interface and AI-powered research capabilities.",
-  "requestFramePermissions": []
+  "name": "Project Ledger",
+  "description": "Nostalgic, high-precision project research and management ledger.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
 }

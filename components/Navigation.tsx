@@ -11,40 +11,39 @@ interface NavigationProps {
 }
 
 const getContrastColor = (hex: string) => {
-  if (!hex) return 'text-stone-400';
+  if (!hex) return 'text-slate-400';
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 128 ? 'text-stone-900' : 'text-stone-100';
+  return brightness > 128 ? 'text-slate-900' : 'text-white';
 };
 
 const Navigation: React.FC<NavigationProps> = ({ 
   activeView, 
   onViewChange, 
   activeNotebookTitle, 
-  activeNotebookColor = '#1c1917',
+  activeNotebookColor = '#1e293b',
   onBackToShelf 
 }) => {
   const tabs: { id: AppView; label: string; icon: string }[] = [
     { id: 'dashboard', label: 'Cmd', icon: '🏠' },
-    { id: 'steno', label: 'Pad', icon: '📝' },
+    // Fix: Changed 'steno' to 'ledger' to match AppView/AppMode types
+    { id: 'ledger', label: 'Pad', icon: '📝' },
     { id: 'research', label: 'Scan', icon: '🔍' },
-    { id: 'vault', label: 'Vault', icon: '🗄️' },
-    { id: 'outlines', label: 'Brief', icon: '📑' },
     { id: 'raw', label: 'Raw', icon: '📄' },
   ];
 
   if (activeView === 'shelf') return null;
 
   const contrastColor = getContrastColor(activeNotebookColor);
-  const isDark = contrastColor === 'text-stone-100';
+  const isDark = contrastColor === 'text-white';
 
   return (
     <nav 
       className="sticky top-0 z-50 backdrop-blur-md border-b shadow-xl transition-colors duration-500 overflow-x-auto no-scrollbar"
       style={{ 
-        backgroundColor: `${activeNotebookColor}F2`,
+        backgroundColor: `${activeNotebookColor}EE`,
         borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' 
       }}
     >
@@ -70,8 +69,8 @@ const Navigation: React.FC<NavigationProps> = ({
               className={`
                 px-3 py-2 rounded-lg flex items-center gap-2 text-[10px] font-black font-mono uppercase transition-all flex-shrink-0
                 ${activeView === tab.id 
-                  ? (isDark ? 'bg-white text-stone-900 shadow-md ring-1 ring-white/20' : 'bg-stone-900 text-white shadow-md ring-1 ring-black/20')
-                  : `${isDark ? 'text-white/60 hover:text-white hover:bg-white/10' : 'text-stone-600 hover:text-stone-900 hover:bg-black/5'}`
+                  ? (isDark ? 'bg-white text-slate-900 shadow-md ring-1 ring-white/20' : 'bg-slate-900 text-white shadow-md ring-1 ring-black/20')
+                  : `${isDark ? 'text-white/60 hover:text-white hover:bg-white/10' : 'text-slate-600 hover:text-slate-900 hover:bg-black/5'}`
                 }
               `}
             >

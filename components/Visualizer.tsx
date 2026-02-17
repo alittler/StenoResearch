@@ -14,21 +14,30 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasKey, setHasKey] = useState<boolean>(false);
+  const [hasKey, setHasKey] = useState<boolean>(true); // Default true, will check if window.aistudio exists
 
   useEffect(() => {
     const checkKey = async () => {
       // @ts-ignore
-      const selected = await window.aistudio.hasSelectedApiKey();
-      setHasKey(selected);
+      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
+        // @ts-ignore
+        const selected = await window.aistudio.hasSelectedApiKey();
+        setHasKey(selected);
+      } else {
+        // Not in AI Studio environment, assume process.env.API_KEY is handled by build tool
+        setHasKey(true);
+      }
     };
     checkKey();
   }, []);
 
   const handleOpenKey = async () => {
     // @ts-ignore
-    await window.aistudio.openSelectKey();
-    setHasKey(true); // Assume success per guidelines
+    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+      // @ts-ignore
+      await window.aistudio.openSelectKey();
+      setHasKey(true); 
+    }
   };
 
   const handleGenerate = async () => {
@@ -41,11 +50,11 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
       onAddImage(prompt, imageData);
       setPrompt('');
     } catch (err: any) {
-      if (err.message?.includes("entity was not found")) {
+      if (err.message?.includes("entity was not found") || err.message?.includes("404")) {
         setHasKey(false);
-        setError("API Key session expired. Please reconnect.");
+        setError("API Key verification failed. Re-select key or check billing.");
       } else {
-        setError("Visual synthesis failed. Ensure your API_KEY is valid.");
+        setError("Visual synthesis failed. Ensure your API_KEY is valid and billing is enabled.");
       }
       console.error(err);
     } finally {
@@ -53,33 +62,24 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
     }
   };
 
-  if (!hasKey) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6 text-center">
-        <div className="w-20 h-20 bg-stone-200 rounded-full flex items-center justify-center text-3xl">🖼️</div>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-black font-mono uppercase tracking-tighter">Visualizer Offline</h2>
-          <p className="text-sm font-mono text-stone-500 max-w-xs mx-auto">
-            High-quality image generation requires an active Studio Key selection.
-          </p>
-        </div>
-        <button 
-          onClick={handleOpenKey}
-          className="bg-stone-900 text-white px-8 py-4 rounded-xl font-black font-mono uppercase text-xs hover:bg-black transition-all shadow-xl active:scale-95"
-        >
-          Connect Studio Key
-        </button>
-        <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="text-[10px] text-stone-400 underline font-mono">Billing Documentation</a>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="bg-stone-900 rounded-3xl p-8 md:p-10 shadow-2xl border-b-[8px] border-stone-950 paper-texture">
         <h2 className="text-2xl md:text-3xl font-black font-mono text-stone-100 uppercase tracking-tighter mb-8 flex items-center gap-4">
           CONCEPT VISUALIZER
         </h2>
+
+        {!hasKey && (
+          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between">
+            <p className="text-[10px] font-mono text-amber-500 uppercase font-black">Pro Image Generation requires a Billing-enabled API Key</p>
+            <button 
+              onClick={handleOpenKey}
+              className="px-4 py-2 bg-amber-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all"
+            >
+              Select Key
+            </button>
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-4">
           <input 

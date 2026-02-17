@@ -2,164 +2,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 /**
- * Analyzes how well a collection of notes supports the core concept.
- */
-export async function auditConceptAlignment(concept: string, notes: { id: string, content: string }[]) {
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const notesContext = notes.map(n => `ID:${n.id} | Content:${n.content}`).join('\n---\n');
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `
-        CORE CONCEPT: ${concept}
-        
-        NOTES TO AUDIT:
-        ${notesContext}
-      `,
-      config: {
-        systemInstruction: `
-          You are a Content Auditor. Evaluate how each note relates to the Core Concept.
-          Assign an alignmentScore (0-100) and a brief justification.
-          Identify "Gaps" (areas the concept claims to cover but notes don't support) and "Drift" (notes that don't fit the concept).
-          Return valid JSON.
-        `,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            noteAlignments: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.STRING },
-                  score: { type: Type.NUMBER },
-                  reasoning: { type: Type.STRING }
-                },
-                required: ["id", "score", "reasoning"]
-              }
-            },
-            overallAnalysis: { type: Type.STRING },
-            gaps: { type: Type.ARRAY, items: { type: Type.STRING } }
-          },
-          required: ["noteAlignments", "overallAnalysis", "gaps"]
-        }
-      },
-    });
-
-    return JSON.parse(response.text.trim());
-  } catch (error: any) {
-    console.error("Audit Error:", error);
-    throw error;
-  }
-}
-
-/**
- * Shreds a "Wall of Text" into structured atomic notes using Gemini 3 Pro.
- */
-export async function shredWallOfText(text: string) {
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: text,
-      config: {
-        systemInstruction: `
-          As the "Knowledge Architect", transform the "Wall of Text" into structured notes.
-          OMIT ALL CONVERSATIONAL FILLER, PREFACES, OR INTRODUCTORY REMARKS. Start directly with the data.
-
-          ### CLASSIFICATION LOGIC
-          - MANUSCRIPT: Actual prose.
-          - CHARACTER: Descriptions or arcs.
-          - WORLD-BUILDING: Lore or rules.
-          - RESEARCH: Facts or links.
-          - BRAINSTORM: Loose ideas.
-
-          Return a strict JSON array.
-        `,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              raw_source_id: { type: Type.STRING },
-              title: { type: Type.STRING },
-              content: { type: Type.STRING },
-              category: { 
-                type: Type.STRING,
-                enum: ['MANUSCRIPT', 'CHARACTER', 'WORLD-BUILDING', 'RESEARCH', 'BRAINSTORM']
-              },
-              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-              links: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    url: { type: Type.STRING },
-                    description: { type: Type.STRING }
-                  },
-                  required: ["url", "description"]
-                }
-              },
-              is_priority: { type: Type.BOOLEAN }
-            },
-            required: ["raw_source_id", "title", "content", "category", "tags", "links", "is_priority"]
-          }
-        }
-      },
-    });
-
-    return JSON.parse(response.text.trim());
-  } catch (error: any) {
-    console.error("Architect Error:", error);
-    throw error;
-  }
-}
-
-/**
- * Summarizes a long question/prompt into a concise one-line heading.
- */
-export async function summarizePrompt(prompt: string) {
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Summarize this research prompt into a concise one-line title (max 10 words). Omit all prefaces.\n\nPrompt: ${prompt}`,
-    });
-    return response.text.trim().replace(/^["']|["']$/g, '');
-  } catch (error) {
-    console.error("Summarization Error:", error);
-    return prompt.slice(0, 50) + "...";
-  }
-}
-
-/**
  * Performs research using Google Search grounding.
+ * Uses project context to provide relevant data for the specific project.
  */
-export async function askResearchQuestion(question: string, context: string, imageData?: string) {
+export async function askResearchQuestion(question: string, context: string) {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const parts: any[] = [
-      { text: `Context from my existing project notes:\n${context}\n\nResearch Question: ${question}` }
-    ];
-
-    if (imageData) {
-      parts.push({
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: imageData.split(',')[1]
-        }
-      });
-    }
-
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: { parts },
+      contents: `Current Project Context:\n${context}\n\nResearch Inquiry: ${question}`,
       config: {
-        systemInstruction: "You are a professional researcher. OMIT ALL PREFACES, INTRODUCTIONS, AND CONVERSATIONAL FILLER. Start directly with the factual information. Be concise and authoritative.",
+        systemInstruction: "You are an expert project analyst and researcher. Provide highly factual, concise information. Do not use greetings or conversational filler. Use Markdown for structuring data.",
         tools: [{ googleSearch: {} }],
       },
     });
@@ -169,61 +22,109 @@ export async function askResearchQuestion(question: string, context: string, ima
       .filter(Boolean) || [];
 
     return {
-      text: response.text || "",
-      urls: urls,
+      text: response.text || "No specific data found.",
+      urls: Array.from(new Set(urls)),
     };
   } catch (error) {
-    console.error("Research Error:", error);
+    console.error("AI Research Error:", error);
     throw error;
   }
 }
 
 /**
- * Synthesizes data into a structured project outline.
+ * Synthesizes project entries into a cohesive project outline using reasoning models.
  */
-export async function weaveProjectOutline(notepadNotes: { content: string; timestamp: number }[], researchNotes: string[]) {
+export async function weaveProjectOutline(notepadEntries: { content: string, timestamp: number }[], researchEntries: string[]) {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const notesContext = notepadNotes
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .map(n => `[Note at ${new Date(n.timestamp).toISOString()}]: ${n.content}`)
-      .join('\n\n');
-    const researchContext = researchNotes.join('\n\n');
+    const prompt = `Synthesize the following project notes and research into a cohesive project outline. 
+    Prioritize newer notes based on timestamps if there are contradictions.
+    
+    Notepad Entries:
+    ${notepadEntries.sort((a, b) => b.timestamp - a.timestamp).map(e => `[${new Date(e.timestamp).toISOString()}] ${e.content}`).join('\n')}
+    
+    Research Context:
+    ${researchEntries.join('\n')}`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: `Synthesize this into a Markdown outline. OMIT ALL PREFACES.\n\nNOTES:\n${notesContext}\n\nRESEARCH:\n${researchContext}`,
+      contents: prompt,
       config: {
-        systemInstruction: "You are a master architect. Build a logical hierarchy. CRITICAL AUTHORITY RULE: Most recent entries have absolute authority. Omit conversational introductions.",
-      },
+        systemInstruction: "You are a senior project architect. Create a detailed, structured project outline based on provided notes and research. Use Markdown headers and bullet points. Be concise and technical.",
+      }
     });
 
-    return { text: response.text || "" };
+    return { text: response.text || "Failed to generate outline." };
   } catch (error) {
-    console.error("Outline Error:", error);
+    console.error("AI Outline Synthesis Error:", error);
     throw error;
   }
 }
 
 /**
- * Generates project concept images.
+ * Generates an image representing a project concept using gemini-2.5-flash-image.
  */
-export async function generateProjectImage(prompt: string) {
+export async function generateProjectImage(prompt: string): Promise<string> {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
-      contents: { parts: [{ text: prompt }] },
-      config: {
-        imageConfig: { aspectRatio: "1:1", imageSize: "1K" },
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [{ text: prompt }]
       },
     });
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+
+    if (!response.candidates?.[0]?.content?.parts) {
+      throw new Error("No response from AI");
     }
-    throw new Error("No image data returned.");
+
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+      }
+    }
+    throw new Error("No image part found in the response");
   } catch (error) {
-    console.error("Visualizer Error:", error);
+    console.error("AI Image Generation Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Analyzes raw text and fragments it into atomic project notes using structured JSON.
+ */
+export async function shredWallOfText(text: string) {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Analyze and break down the following text into atomic project notes:\n\n${text}`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              content: { type: Type.STRING },
+              category: { type: Type.STRING },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+              links: { type: Type.ARRAY, items: { type: Type.STRING } },
+              is_priority: { type: Type.BOOLEAN },
+              raw_source_id: { type: Type.STRING }
+            },
+            required: ["title", "content", "category"]
+          }
+        },
+        systemInstruction: "Extract atomic project notes and findings from raw text. Organize them into meaningful categories and titles.",
+      },
+    });
+
+    const jsonStr = response.text?.trim() || "[]";
+    return JSON.parse(jsonStr);
+  } catch (error) {
+    console.error("AI Text Shredding Error:", error);
     throw error;
   }
 }
