@@ -27,37 +27,33 @@ const Navigation: React.FC<NavigationProps> = ({
   onBackToShelf 
 }) => {
   const tabs: { id: AppView; label: string; icon: string }[] = [
-    { id: 'dashboard', label: 'Cmd', icon: '🏠' },
-    // Fix: Changed 'steno' to 'ledger' to match AppView/AppMode types
+    { id: 'dashboard', label: 'Home', icon: '🏠' },
     { id: 'ledger', label: 'Pad', icon: '📝' },
     { id: 'research', label: 'Scan', icon: '🔍' },
     { id: 'raw', label: 'Raw', icon: '📄' },
   ];
-
-  if (activeView === 'shelf') return null;
 
   const contrastColor = getContrastColor(activeNotebookColor);
   const isDark = contrastColor === 'text-white';
 
   return (
     <nav 
-      className="sticky top-0 z-50 backdrop-blur-md border-b shadow-xl transition-colors duration-500 overflow-x-auto no-scrollbar"
+      className="sticky top-0 z-50 backdrop-blur-md border-b shadow-md transition-colors duration-500"
       style={{ 
         backgroundColor: `${activeNotebookColor}EE`,
         borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' 
       }}
     >
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 flex-shrink-0">
+      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-4">
           <button 
             onClick={onBackToShelf} 
             className={`p-2 rounded-lg transition-colors ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-black/10 hover:bg-black/20 text-black'}`}
-            title="Back to Shelf"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
           </button>
-          <span className={`font-bold font-mono truncate text-xs uppercase tracking-[0.2em] hidden lg:inline ${contrastColor}`}>
-            « {activeNotebookTitle}
+          <span className={`font-black font-mono text-[10px] uppercase tracking-widest hidden md:inline ${contrastColor}`}>
+            LEDGER « {activeNotebookTitle}
           </span>
         </div>
 
@@ -67,14 +63,14 @@ const Navigation: React.FC<NavigationProps> = ({
               key={tab.id} 
               onClick={() => onViewChange(tab.id)} 
               className={`
-                px-3 py-2 rounded-lg flex items-center gap-2 text-[10px] font-black font-mono uppercase transition-all flex-shrink-0
+                px-4 py-2 rounded-xl flex items-center gap-2 text-[10px] font-black font-mono uppercase transition-all
                 ${activeView === tab.id 
-                  ? (isDark ? 'bg-white text-slate-900 shadow-md ring-1 ring-white/20' : 'bg-slate-900 text-white shadow-md ring-1 ring-black/20')
+                  ? (isDark ? 'bg-white text-slate-900 shadow-lg' : 'bg-slate-900 text-white shadow-lg')
                   : `${isDark ? 'text-white/60 hover:text-white hover:bg-white/10' : 'text-slate-600 hover:text-slate-900 hover:bg-black/5'}`
                 }
               `}
             >
-              <span className="text-sm">{tab.icon}</span>
+              <span className="text-base">{tab.icon}</span>
               <span className="hidden sm:inline">{tab.label}</span>
             </button>
           ))}

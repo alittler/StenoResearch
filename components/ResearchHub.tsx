@@ -10,9 +10,17 @@ interface ResearchHubProps {
   onAddResearch: (question: string, answer: string, urls: string[]) => void;
   onPin: (note: ProjectNote) => void;
   onDelete: (id: string) => void;
+  onRequestKey: () => void;
 }
 
-const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch, onPin, onDelete }) => {
+const ResearchHub: React.FC<ResearchHubProps> = ({ 
+  notes, 
+  context, 
+  onAddResearch, 
+  onPin, 
+  onDelete, 
+  onRequestKey 
+}) => {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +36,13 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
       const result = await askResearchQuestion(query, context);
       onAddResearch(query, result.text, result.urls);
       setQuery('');
-    } catch (err) {
-      setError("AI Service unavailable. Ensure your configuration is correct.");
+    } catch (err: any) {
+      if (err.message === "MISSING_API_KEY" || err.message === "INVALID_API_KEY") {
+        setError("API Connection Error. Verify project API key in environment.");
+        onRequestKey();
+      } else {
+        setError("Research failed. Verify your network or query details.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -58,7 +71,12 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
             {isLoading ? "Executing Search..." : "Execute Scan"}
           </button>
         </form>
-        {error && <p className="text-red-400 text-center text-[10px] font-bold uppercase mt-4 tracking-wider">{error}</p>}
+        {error && (
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <p className="text-red-400 text-center text-[10px] font-bold uppercase tracking-wider">{error}</p>
+            <button onClick={onRequestKey} className="text-blue-400 text-[9px] font-black uppercase tracking-widest hover:underline">Select Key</button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

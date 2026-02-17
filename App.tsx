@@ -5,15 +5,14 @@ import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
 import StenoPad from './components/StenoPad';
 import ResearchHub from './components/ResearchHub';
-import Outlines from './components/Outlines';
-import Visualizer from './components/Visualizer';
 import RawTextEditor from './components/RawTextEditor';
 import NotebookShelf from './components/NotebookShelf';
 
-const STORAGE_KEY = 'steno_ledger_integrated_v1';
+const STORAGE_KEY = 'ledger_core_v3';
+const BUILD_SHA = '9a2c4e8'; // Updated build identifier
 
 const INITIAL_NOTEBOOKS: Notebook[] = [
-  { id: 'general', title: 'Primary Project Ledger', color: '#64748b', createdAt: Date.now(), coreConcept: 'The central vision for the project...' }
+  { id: 'general', title: 'Primary Project Ledger', color: '#1e293b', createdAt: Date.now() }
 ];
 
 const App: React.FC = () => {
@@ -22,8 +21,9 @@ const App: React.FC = () => {
   const [activeNotebookId, setActiveNotebookId] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<AppView>('shelf');
   const [isInitialized, setIsInitialized] = useState(false);
+  const [hasUnsavedExport, setHasUnsavedExport] = useState(false);
 
-  // Load persistence
+  // Load persistence from local cache
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -31,19 +31,43 @@ const App: React.FC = () => {
         const parsed = JSON.parse(saved);
         setNotebooks(parsed.notebooks || INITIAL_NOTEBOOKS);
         setNotes(parsed.notes || []);
+        // If we just loaded, we assume it's "saved" relative to the last export status 
+        // (Simplified logic: we set unsaved export to true on any future change)
       } catch (e) {
-        console.error("Failed to restore state", e);
+        console.error("Persistence error", e);
       }
     }
     setIsInitialized(true);
   }, []);
 
-  // Save persistence
+  // Sync to local cache on every change
   useEffect(() => {
     if (isInitialized) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ notebooks, notes }));
     }
   }, [notebooks, notes, isInitialized]);
+
+  // Track changes for export warning
+  useEffect(() => {
+    if (isInitialized) {
+      // Any time notebooks or notes change, we mark the export as "dirty"
+      setHasUnsavedExport(true);
+    }
+  }, [notebooks, notes]);
+
+  // Handle "Warn on Exit" browser event
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedExport) {
+        const message = "You have unsaved changes that haven't been exported. Are you sure you want to exit?";
+        e.returnValue = message;
+        return message;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedExport]);
 
   const activeNotebook = useMemo(() => 
     notebooks.find(nb => nb.id === activeNotebookId), 
@@ -77,8 +101,7 @@ const App: React.FC = () => {
       id: crypto.randomUUID(),
       title,
       color,
-      createdAt: Date.now(),
-      coreConcept: ''
+      createdAt: Date.now()
     };
     setNotebooks(prev => [...prev, newNB]);
   };
@@ -89,42 +112,40 @@ const App: React.FC = () => {
     setNotes(prev => prev.filter(n => n.notebookId !== id));
   };
 
+  const handleBackupPerformed = () => {
+    setHasUnsavedExport(false);
+  };
+
   const handleRestore = (data: any) => {
     if (data.notebooks && data.notes) {
       setNotebooks(data.notebooks);
       setNotes(data.notes);
-      alert("Restore successful.");
+      setHasUnsavedExport(false);
     }
   };
 
   if (!isInitialized) return null;
 
-  if (currentView === 'shelf' || !activeNotebookId) {
+  const renderView = () => {
+    if (currentView === 'shelf' || !activeNotebookId) {
+      return (
+        <div className="flex-1">
+          <NotebookShelf 
+            notebooks={notebooks}
+            notes={notes}
+            onSelect={(id) => { setActiveNotebookId(id); setCurrentView('dashboard'); }}
+            onAdd={handleCreateNotebook}
+            onDelete={handleDeleteNotebook}
+            hasUnsavedChanges={hasUnsavedExport}
+            onBackupPerformed={handleBackupPerformed}
+            onRestore={handleRestore}
+          />
+        </div>
+      );
+    }
+
     return (
-      <NotebookShelf 
-        notebooks={notebooks}
-        notes={notes}
-        onSelect={(id) => { setActiveNotebookId(id); setCurrentView('dashboard'); }}
-        onAdd={handleCreateNotebook}
-        onDelete={handleDeleteNotebook}
-        hasUnsavedChanges={false}
-        onBackupPerformed={() => {}}
-        onRestore={handleRestore}
-      />
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#f8fafc]">
-      <Navigation 
-        activeView={currentView}
-        onViewChange={setCurrentView}
-        activeNotebookTitle={activeNotebook?.title}
-        activeNotebookColor={activeNotebook?.color}
-        onBackToShelf={() => setCurrentView('shelf')}
-      />
-
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-4 py-8 flex-1 w-full">
         {currentView === 'dashboard' && (
           <Dashboard 
             notebook={activeNotebook!}
@@ -133,7 +154,6 @@ const App: React.FC = () => {
             onAddNote={(c) => addNote(c, 'ledger')}
           />
         )}
-
         {currentView === 'ledger' && (
           <StenoPad 
             notes={activeNotes.filter(n => n.type === 'ledger')}
@@ -141,7 +161,6 @@ const App: React.FC = () => {
             onDeleteNote={deleteNote}
           />
         )}
-
         {currentView === 'research' && (
           <ResearchHub 
             notes={activeNotes.filter(n => n.type === 'research')}
@@ -149,28 +168,13 @@ const App: React.FC = () => {
             onAddResearch={(q, a, u) => addNote(a, 'research', { question: q, metadata: { urls: u } })}
             onPin={(note) => addNote(`📌 PINNED RESEARCH:\n${note.content}`, 'ledger')}
             onDelete={deleteNote}
+            onRequestKey={async () => {
+              if ((window as any).aistudio?.openSelectKey) {
+                await (window as any).aistudio.openSelectKey();
+              }
+            }}
           />
         )}
-
-        {currentView === 'brief' && (
-          <Outlines 
-            notepadNotes={activeNotes.filter(n => n.type === 'ledger')}
-            researchNotes={activeNotes.filter(n => n.type === 'research')}
-            existingOutlines={activeNotes.filter(n => n.type === 'outline')}
-            onSaveOutline={(content) => addNote(content, 'outline')}
-            onDeleteOutline={deleteNote}
-          />
-        )}
-
-        {currentView === 'visualizer' && (
-          <Visualizer 
-            notes={activeNotes.filter(n => n.type === 'image')}
-            notepadContext={activeNotes.slice(0, 5).map(n => n.content).join('\n')}
-            onAddImage={(prompt, data) => addNote(prompt, 'image', { metadata: { imageData: data } })}
-            onDeleteImage={deleteNote}
-          />
-        )}
-
         {currentView === 'raw' && (
           <RawTextEditor 
             allNotes={activeNotes}
@@ -178,6 +182,41 @@ const App: React.FC = () => {
           />
         )}
       </main>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+      {currentView !== 'shelf' && activeNotebookId && (
+        <Navigation 
+          activeView={currentView}
+          onViewChange={setCurrentView}
+          activeNotebookTitle={activeNotebook?.title}
+          activeNotebookColor={activeNotebook?.color}
+          onBackToShelf={() => setCurrentView('shelf')}
+        />
+      )}
+
+      {renderView()}
+
+      <footer className="py-4 px-6 bg-white border-t border-slate-200 flex justify-between items-center text-[10px] font-mono uppercase tracking-widest">
+        <div className="flex items-center gap-6">
+          <span className="text-slate-300 font-bold">&copy; Project Ledger Core</span>
+          {hasUnsavedExport && (
+            <div className="flex items-center gap-2 text-amber-500 font-black animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              UNSYNCED EXPORT
+            </div>
+          )}
+          {!hasUnsavedExport && (
+            <div className="flex items-center gap-2 text-emerald-400 font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              BACKED UP
+            </div>
+          )}
+        </div>
+        <div className="text-slate-300 font-bold">SHA: {BUILD_SHA}</div>
+      </footer>
     </div>
   );
 };
