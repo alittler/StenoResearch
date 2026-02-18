@@ -1,44 +1,20 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ProjectNote } from '../types';
 import { generateProjectImage } from '../services/geminiService';
 
 interface VisualizerProps {
   notes: ProjectNote[];
-  notepadContext: string;
+  apiKey: string;
   onAddImage: (prompt: string, imageData: string) => void;
   onDeleteImage: (id: string) => void;
+  onRequestKey: () => void;
 }
 
-const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddImage, onDeleteImage }) => {
+const Visualizer: React.FC<VisualizerProps> = ({ notes, apiKey, onAddImage, onDeleteImage, onRequestKey }) => {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasKey, setHasKey] = useState<boolean>(true); // Default true, will check if window.aistudio exists
-
-  useEffect(() => {
-    const checkKey = async () => {
-      // @ts-ignore
-      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
-        // @ts-ignore
-        const selected = await window.aistudio.hasSelectedApiKey();
-        setHasKey(selected);
-      } else {
-        // Not in AI Studio environment, assume process.env.API_KEY is handled by build tool
-        setHasKey(true);
-      }
-    };
-    checkKey();
-  }, []);
-
-  const handleOpenKey = async () => {
-    // @ts-ignore
-    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-      // @ts-ignore
-      await window.aistudio.openSelectKey();
-      setHasKey(true); 
-    }
-  };
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
@@ -46,15 +22,15 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
     setError(null);
 
     try {
-      const imageData = await generateProjectImage(prompt);
+      const imageData = await generateProjectImage(prompt, apiKey);
       onAddImage(prompt, imageData);
       setPrompt('');
     } catch (err: any) {
-      if (err.message?.includes("entity was not found") || err.message?.includes("404")) {
-        setHasKey(false);
-        setError("API Key verification failed. Re-select key or check billing.");
+      if (err.message === "MISSING_API_KEY" || err.message === "INVALID_API_KEY") {
+        setError("API Key required for image generation.");
+        onRequestKey();
       } else {
-        setError("Visual synthesis failed. Ensure your API_KEY is valid and billing is enabled.");
+        setError("Visual synthesis failed. Ensure billing is enabled for your key.");
       }
       console.error(err);
     } finally {
@@ -63,17 +39,17 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="bg-stone-900 rounded-3xl p-8 md:p-10 shadow-2xl border-b-[8px] border-stone-950 paper-texture">
         <h2 className="text-2xl md:text-3xl font-black font-mono text-stone-100 uppercase tracking-tighter mb-8 flex items-center gap-4">
           CONCEPT VISUALIZER
         </h2>
 
-        {!hasKey && (
+        {!apiKey && (
           <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between">
             <p className="text-[10px] font-mono text-amber-500 uppercase font-black">Pro Image Generation requires a Billing-enabled API Key</p>
             <button 
-              onClick={handleOpenKey}
+              onClick={onRequestKey}
               className="px-4 py-2 bg-amber-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all"
             >
               Select Key
@@ -111,20 +87,13 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
             notes.map((note, idx) => (
               <div 
                 key={note.id} 
-                className="group relative bg-white p-3 md:p-4 pt-4 pb-12 md:pb-16 shadow-2xl border border-stone-200 transition-all md:hover:scale-110 md:hover:rotate-0 hover:z-50 active:scale-95"
-                style={{ 
-                  transform: `rotate(${(idx % 2 === 0 ? 1 : -1) * (idx % 4 + 2)}deg)`, 
-                  width: window.innerWidth < 640 ? '180px' : '300px' 
-                }}
+                className="group relative bg-white p-3 md:p-4 pt-4 pb-12 md:pb-16 shadow-2xl border border-stone-200 transition-all md:hover:scale-110 md:hover:rotate-0 hover:z-50"
+                style={{ transform: `rotate(${(idx % 2 === 0 ? 1 : -1) * (idx % 4 + 2)}deg)`, width: '300px' }}
               >
                 <div className="aspect-square bg-stone-100 overflow-hidden relative border border-stone-100">
                   <img src={note.metadata?.imageData} alt={note.content} className="w-full h-full object-cover grayscale-[0.1] contrast-125" />
                 </div>
-                <div className="mt-4 md:mt-6 px-1">
-                  <p className="font-handwriting text-stone-800 text-lg md:text-2xl leading-none line-clamp-2 italic">
-                    {note.content}
-                  </p>
-                </div>
+                <div className="mt-4 md:mt-6 px-1 italic text-stone-800 text-lg line-clamp-2">{note.content}</div>
                 <button onClick={() => onDeleteImage(note.id)} className="absolute bottom-3 right-3 p-2 text-stone-200 hover:text-red-500 transition-colors">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>

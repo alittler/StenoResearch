@@ -7,9 +7,12 @@ import StenoPad from './components/StenoPad';
 import ResearchHub from './components/ResearchHub';
 import RawTextEditor from './components/RawTextEditor';
 import NotebookShelf from './components/NotebookShelf';
+import Outlines from './components/Outlines';
+import Visualizer from './components/Visualizer';
 
 const STORAGE_KEY = 'ledger_core_v3_persistent';
-const BUILD_SHA = '9a2c4e8';
+const API_KEY_STORAGE_KEY = 'ledger_user_api_key';
+const BUILD_SHA = 'key-fix-v4';
 
 const INITIAL_NOTEBOOKS: Notebook[] = [
   { id: 'general', title: 'Primary Project Ledger', color: '#1e293b', createdAt: Date.now() }
@@ -23,8 +26,11 @@ const App: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasUnsavedExport, setHasUnsavedExport] = useState(false);
   const [userHasInteracted, setUserHasInteracted] = useState(false);
+  
+  // API Key State
+  const [globalApiKey, setGlobalApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE_KEY) || '');
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
 
-  // Load from local cache
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -32,54 +38,36 @@ const App: React.FC = () => {
         const parsed = JSON.parse(saved);
         if (parsed.notebooks) setNotebooks(parsed.notebooks);
         if (parsed.notes) setNotes(parsed.notes);
-      } catch (e) {
-        console.error("Local cache restoration failed", e);
-      }
+      } catch (e) { console.error("Restore failed", e); }
     }
     setIsInitialized(true);
   }, []);
 
-  // Save to local cache on every change
   useEffect(() => {
     if (isInitialized) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ notebooks, notes }));
     }
   }, [notebooks, notes, isInitialized]);
 
-  // Track if changes happened since last export
-  const handleDataChange = useCallback(() => {
-    if (isInitialized) {
-      setHasUnsavedExport(true);
-    }
-  }, [isInitialized]);
-
   useEffect(() => {
     if (isInitialized) {
-      // Small delay to prevent initial load from triggering unsaved state
-      const timeout = setTimeout(() => {
-        handleDataChange();
-      }, 100);
+      const timeout = setTimeout(() => setHasUnsavedExport(true), 500);
       return () => clearTimeout(timeout);
     }
   }, [notes, notebooks, isInitialized]);
 
-  // Warn on exit
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedExport && userHasInteracted) {
-        const message = "You have unsaved changes that have not been exported to JSON. Exit anyway?";
         e.preventDefault();
-        e.returnValue = message; // Standard for most browsers
-        return message;
+        e.returnValue = "Unsaved changes detected.";
+        return e.returnValue;
       }
     };
-
     const handleInteraction = () => setUserHasInteracted(true);
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('mousedown', handleInteraction);
     window.addEventListener('keydown', handleInteraction);
-
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('mousedown', handleInteraction);
@@ -87,15 +75,8 @@ const App: React.FC = () => {
     };
   }, [hasUnsavedExport, userHasInteracted]);
 
-  const activeNotebook = useMemo(() => 
-    notebooks.find(nb => nb.id === activeNotebookId), 
-    [notebooks, activeNotebookId]
-  );
-
-  const activeNotes = useMemo(() => 
-    notes.filter(n => n.notebookId === activeNotebookId), 
-    [notes, activeNotebookId]
-  );
+  const activeNotebook = useMemo(() => notebooks.find(nb => nb.id === activeNotebookId), [notebooks, activeNotebookId]);
+  const activeNotes = useMemo(() => notes.filter(n => n.notebookId === activeNotebookId), [notes, activeNotebookId]);
 
   const addNote = (content: string, type: ProjectNote['type'] = 'ledger', extra?: Partial<ProjectNote>) => {
     if (!activeNotebookId) return;
@@ -110,131 +91,96 @@ const App: React.FC = () => {
     setNotes(prev => [newNote, ...prev]);
   };
 
-  const deleteNote = (id: string) => {
-    setNotes(prev => prev.filter(n => n.id !== id));
-  };
+  const deleteNote = (id: string) => setNotes(prev => prev.filter(n => n.id !== id));
 
-  const handleCreateNotebook = (title: string, color: string) => {
-    const newNB: Notebook = {
-      id: crypto.randomUUID(),
-      title,
-      color,
-      createdAt: Date.now()
-    };
-    setNotebooks(prev => [...prev, newNB]);
-  };
-
-  const handleDeleteNotebook = (id: string) => {
-    if (id === 'general') return;
-    setNotebooks(prev => prev.filter(nb => nb.id !== id));
-    setNotes(prev => prev.filter(n => n.notebookId !== id));
-  };
-
-  const handleBackupPerformed = () => {
-    setHasUnsavedExport(false);
-  };
-
-  const handleRestore = (data: any) => {
-    if (data.notebooks && data.notes) {
-      setNotebooks(data.notebooks);
-      setNotes(data.notes);
-      setHasUnsavedExport(false);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ notebooks: data.notebooks, notes: data.notes }));
+  const handleRequestKey = async () => {
+    setIsKeyModalOpen(true);
+    if ((window as any).aistudio?.openSelectKey) {
+      await (window as any).aistudio.openSelectKey();
     }
   };
 
-  if (!isInitialized) return null;
+  const handleSaveKey = (key: string) => {
+    setGlobalApiKey(key);
+    localStorage.setItem(API_KEY_STORAGE_KEY, key);
+    setIsKeyModalOpen(false);
+  };
 
   const renderView = () => {
     if (currentView === 'shelf' || !activeNotebookId) {
       return (
-        <div className="flex-1">
-          <NotebookShelf 
-            notebooks={notebooks}
-            notes={notes}
-            onSelect={(id) => { setActiveNotebookId(id); setCurrentView('dashboard'); }}
-            onAdd={handleCreateNotebook}
-            onDelete={handleDeleteNotebook}
-            hasUnsavedChanges={hasUnsavedExport}
-            onBackupPerformed={handleBackupPerformed}
-            onRestore={handleRestore}
-          />
-        </div>
+        <NotebookShelf 
+          notebooks={notebooks} notes={notes} 
+          onSelect={(id) => { setActiveNotebookId(id); setCurrentView('dashboard'); }}
+          onAdd={(title, color) => setNotebooks(prev => [...prev, { id: crypto.randomUUID(), title, color, createdAt: Date.now() }])}
+          onDelete={(id) => { setNotebooks(prev => prev.filter(nb => nb.id !== id)); setNotes(prev => prev.filter(n => n.notebookId !== id)); }}
+          hasUnsavedChanges={hasUnsavedExport} onBackupPerformed={() => setHasUnsavedExport(false)}
+          onRestore={(data) => { setNotebooks(data.notebooks); setNotes(data.notes); setHasUnsavedExport(false); }}
+        />
       );
     }
 
-    return (
-      <main className="max-w-6xl mx-auto px-4 py-8 flex-1 w-full">
-        {currentView === 'dashboard' && (
-          <Dashboard 
-            notebook={activeNotebook!}
-            notes={activeNotes}
-            onNavigate={setCurrentView}
-            onAddNote={(c) => addNote(c, 'ledger')}
-          />
-        )}
-        {currentView === 'ledger' && (
-          <StenoPad 
-            notes={activeNotes.filter(n => n.type === 'ledger')}
-            onAddNote={(c) => addNote(c, 'ledger')}
-            onDeleteNote={deleteNote}
-          />
-        )}
-        {currentView === 'research' && (
-          <ResearchHub 
-            notes={activeNotes.filter(n => n.type === 'research')}
-            context={activeNotes.slice(0, 10).map(n => n.content).join('\n')}
-            onAddResearch={(q, a, u) => addNote(a, 'research', { question: q, metadata: { urls: u } })}
-            onPin={(note) => addNote(`📌 PINNED RESEARCH:\n${note.content}`, 'ledger')}
-            onDelete={deleteNote}
-            onRequestKey={async () => {
-              if ((window as any).aistudio?.openSelectKey) {
-                await (window as any).aistudio.openSelectKey();
-              }
-            }}
-          />
-        )}
-        {currentView === 'raw' && (
-          <RawTextEditor 
-            allNotes={activeNotes}
-            notebookTitle={activeNotebook!.title}
-          />
-        )}
-      </main>
-    );
+    const commonProps = {
+      apiKey: globalApiKey,
+      onRequestKey: handleRequestKey
+    };
+
+    switch (currentView) {
+      case 'dashboard': return <Dashboard notebook={activeNotebook!} notes={activeNotes} onNavigate={setCurrentView} onAddNote={(c) => addNote(c, 'ledger')} />;
+      case 'ledger': return <StenoPad notes={activeNotes.filter(n => n.type === 'ledger')} onAddNote={(c) => addNote(c, 'ledger')} onDeleteNote={deleteNote} />;
+      case 'research': return (
+        <ResearchHub 
+          {...commonProps}
+          notes={activeNotes.filter(n => n.type === 'research')}
+          context={activeNotes.slice(0, 10).map(n => n.content).join('\n')}
+          onAddResearch={(q, a, u) => addNote(a, 'research', { question: q, metadata: { urls: u } })}
+          onPin={(note) => addNote(`📌 PINNED RESEARCH:\n${note.content}`, 'ledger')}
+          onDelete={deleteNote}
+        />
+      );
+      case 'raw': return <RawTextEditor allNotes={activeNotes} notebookTitle={activeNotebook!.title} />;
+      default: return null;
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">
       {currentView !== 'shelf' && activeNotebookId && (
-        <Navigation 
-          activeView={currentView}
-          onViewChange={setCurrentView}
-          activeNotebookTitle={activeNotebook?.title}
-          activeNotebookColor={activeNotebook?.color}
-          onBackToShelf={() => setCurrentView('shelf')}
-        />
+        <Navigation activeView={currentView} onViewChange={setCurrentView} activeNotebookTitle={activeNotebook?.title} activeNotebookColor={activeNotebook?.color} onBackToShelf={() => setCurrentView('shelf')} />
       )}
-
-      {renderView()}
-
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-8">{renderView()}</main>
+      
+      {/* Footer */}
       <footer className="py-4 px-6 bg-white border-t border-slate-200 flex justify-between items-center text-[10px] font-mono uppercase tracking-widest">
         <div className="flex items-center gap-6">
-          <span className="text-slate-300 font-bold">&copy; Project Ledger Core</span>
-          {hasUnsavedExport ? (
-            <div className="flex items-center gap-2 text-amber-500 font-black animate-pulse">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-              UNSYNCED EXPORT (EXIT WARNING ACTIVE)
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-emerald-400 font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              BACKED UP
-            </div>
-          )}
+          <span className="text-slate-300 font-bold">PROJECT LEDGER CORE</span>
+          <button onClick={handleRequestKey} className={`font-black flex items-center gap-2 ${globalApiKey ? 'text-emerald-500' : 'text-amber-500 animate-pulse'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${globalApiKey ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+            {globalApiKey ? 'API KEY ACTIVE' : 'SELECT API KEY'}
+          </button>
         </div>
         <div className="text-slate-300 font-bold">SHA: {BUILD_SHA}</div>
       </footer>
+
+      {/* Manual Key Modal */}
+      {isKeyModalOpen && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+          <div className="bg-white rounded-[2rem] shadow-2xl p-8 w-full max-w-sm border border-slate-100">
+            <h2 className="text-xs font-black uppercase tracking-[0.3em] mb-4 text-slate-800">API Configuration</h2>
+            <p className="text-[11px] text-slate-500 mb-6 leading-relaxed">Enter your Gemini API Key. This is required for Research and Visualizer features.</p>
+            <input 
+              type="password" placeholder="AIzaSy..."
+              className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-mono focus:border-blue-400 outline-none transition-all mb-6"
+              value={globalApiKey} onChange={(e) => setGlobalApiKey(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSaveKey(globalApiKey)}
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setIsKeyModalOpen(false)} className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Cancel</button>
+              <button onClick={() => handleSaveKey(globalApiKey)} className="flex-1 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">Save Key</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

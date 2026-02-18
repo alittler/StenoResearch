@@ -3,17 +3,11 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 /**
  * Performs research using Google Search grounding.
- * Uses project context to provide relevant data for the specific project.
  */
-export async function askResearchQuestion(question: string, context: string) {
-  // Use the injected process.env.API_KEY exclusively as per guidelines
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey) {
-    throw new Error("MISSING_API_KEY");
-  }
+export async function askResearchQuestion(question: string, context: string, apiKeyOverride?: string) {
+  const apiKey = apiKeyOverride || process.env.API_KEY;
+  if (!apiKey) throw new Error("MISSING_API_KEY");
 
-  // Always create a new instance right before the call
   const ai = new GoogleGenAI({ apiKey });
   
   try {
@@ -26,7 +20,6 @@ export async function askResearchQuestion(question: string, context: string) {
       },
     });
 
-    // Extract grounding URLs for the UI
     const urls = response.candidates?.[0]?.groundingMetadata?.groundingChunks
       ?.map((chunk: any) => chunk.web?.uri)
       .filter(Boolean) || [];
@@ -36,7 +29,9 @@ export async function askResearchQuestion(question: string, context: string) {
       urls: Array.from(new Set(urls)),
     };
   } catch (error: any) {
-    console.error("AI Research Error:", error);
+    if (error.message?.toLowerCase().includes("key") || error.status === 401 || error.status === 403) {
+      throw new Error("INVALID_API_KEY");
+    }
     throw error;
   }
 }
@@ -44,69 +39,60 @@ export async function askResearchQuestion(question: string, context: string) {
 /**
  * Synthesizes project notes and research into a structured outline.
  */
-export async function weaveProjectOutline(notes: {content: string, timestamp: number}[], research: string[]) {
-  const apiKey = process.env.API_KEY;
+export async function weaveProjectOutline(notes: {content: string, timestamp: number}[], research: string[], apiKeyOverride?: string) {
+  const apiKey = apiKeyOverride || process.env.API_KEY;
   if (!apiKey) throw new Error("MISSING_API_KEY");
   
   const ai = new GoogleGenAI({ apiKey });
-
-  // Format entries with timestamps to help the model prioritize newer info
   const ledgerText = notes.map(n => `[${new Date(n.timestamp).toISOString()}] ${n.content}`).join('\n---\n');
   const researchText = research.join('\n---\n');
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: `LEDGER ENTRIES:\n${ledgerText}\n\nRESEARCH CONTEXT:\n${researchText}\n\nTASK: Generate a professional, logically structured project outline. Prioritize information from more recent ledger entries if conflicts arise.`,
+      contents: `LEDGER ENTRIES:\n${ledgerText}\n\nRESEARCH CONTEXT:\n${researchText}\n\nTASK: Generate a professional, logically structured project outline.`,
       config: {
-        systemInstruction: "You are a senior project architect. Synthesize messy logs and research into a clean, actionable project briefing. Use Markdown.",
+        systemInstruction: "You are a senior project architect. Synthesize logs and research into a clean brief. Use Markdown.",
       }
     });
-
-    return { text: response.text || "Outline generation failed to produce content." };
-  } catch (error) {
-    console.error("Outline Synthesis Error:", error);
+    return { text: response.text || "Synthesis failed." };
+  } catch (error: any) {
+    if (error.message?.toLowerCase().includes("key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 }
 
 /**
- * Generates an image representing a project concept using Gemini image generation.
+ * Generates an image representing a project concept.
  */
-export async function generateProjectImage(prompt: string) {
-  const apiKey = process.env.API_KEY;
+export async function generateProjectImage(prompt: string, apiKeyOverride?: string) {
+  const apiKey = apiKeyOverride || process.env.API_KEY;
   if (!apiKey) throw new Error("MISSING_API_KEY");
 
   const ai = new GoogleGenAI({ apiKey });
-
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ text: prompt }] },
     });
-
-    // Per guidelines, iterate parts to find the image part
     for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-      }
+      if (part.inlineData) return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
     }
-    throw new Error("No image data returned from model.");
-  } catch (error) {
-    console.error("Image Generation Error:", error);
+    throw new Error("No image data returned.");
+  } catch (error: any) {
+    if (error.message?.toLowerCase().includes("key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 }
 
 /**
- * Shreds unstructured text into structured, atomic project records using JSON schema.
+ * Shreds unstructured text into structured project records.
  */
-export async function shredWallOfText(text: string) {
-  const apiKey = process.env.API_KEY;
+export async function shredWallOfText(text: string, apiKeyOverride?: string) {
+  const apiKey = apiKeyOverride || process.env.API_KEY;
   if (!apiKey) throw new Error("MISSING_API_KEY");
 
   const ai = new GoogleGenAI({ apiKey });
-
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -118,23 +104,18 @@ export async function shredWallOfText(text: string) {
           items: {
             type: Type.OBJECT,
             properties: {
-              title: { type: Type.STRING, description: "Atomic note title" },
-              content: { type: Type.STRING, description: "Core note details" },
-              category: { type: Type.STRING, description: "Category (e.g., Idea, Research, Task)" },
-              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-              links: { type: Type.ARRAY, items: { type: Type.STRING } },
-              is_priority: { type: Type.BOOLEAN },
-              raw_source_id: { type: Type.STRING }
+              title: { type: Type.STRING },
+              content: { type: Type.STRING },
+              category: { type: Type.STRING }
             },
             required: ['title', 'content', 'category']
           }
         }
       }
     });
-
     return JSON.parse(response.text || "[]");
-  } catch (error) {
-    console.error("Text Shredder Error:", error);
+  } catch (error: any) {
+    if (error.message?.toLowerCase().includes("key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 }
