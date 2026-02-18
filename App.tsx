@@ -9,7 +9,6 @@ import NotebookShelf from './components/NotebookShelf';
 import { generateSHA256 } from './utils/crypto';
 
 const STORAGE_KEY = 'steno_ledger_core_v1';
-const API_KEY_OVERRIDE = 'steno_api_key_override';
 
 const INITIAL_NOTEBOOKS: Notebook[] = [
   { id: 'general', title: 'Primary Project Ledger', color: '#64748b', createdAt: Date.now() }
@@ -22,7 +21,6 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('ledger');
   const [isInitialized, setIsInitialized] = useState(false);
   const [versionHash, setVersionHash] = useState<string>('INIT');
-  const [manualApiKey, setManualApiKey] = useState<string>(() => localStorage.getItem(API_KEY_OVERRIDE) || '');
 
   const lastStateString = useRef<string>('');
 
@@ -34,7 +32,7 @@ const App: React.FC = () => {
         if (parsed.notebooks) setNotebooks(parsed.notebooks);
         if (parsed.notes) setNotes(parsed.notes);
       } catch (e) {
-        console.error("Failed to restore state", e);
+        console.error("Restoration failed", e);
       }
     }
     setIsInitialized(true);
@@ -42,9 +40,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (isInitialized) {
-      const dataToSave = { notebooks, notes };
-      const dataString = JSON.stringify(dataToSave);
-      
+      const dataString = JSON.stringify({ notebooks, notes });
       if (dataString !== lastStateString.current) {
         localStorage.setItem(STORAGE_KEY, dataString);
         lastStateString.current = dataString;
@@ -52,14 +48,6 @@ const App: React.FC = () => {
       }
     }
   }, [notebooks, notes, isInitialized]);
-
-  useEffect(() => {
-    if (manualApiKey) {
-      localStorage.setItem(API_KEY_OVERRIDE, manualApiKey);
-    } else {
-      localStorage.removeItem(API_KEY_OVERRIDE);
-    }
-  }, [manualApiKey]);
 
   const activeNotebook = useMemo(() => 
     notebooks.find(nb => nb.id === activeNotebookId), 
@@ -88,14 +76,6 @@ const App: React.FC = () => {
     setNotes(prev => prev.filter(n => n.id !== id));
   };
 
-  const handleRequestKey = async () => {
-    // @ts-ignore
-    if (window.aistudio?.openSelectKey) {
-      // @ts-ignore
-      await window.aistudio.openSelectKey();
-    }
-  };
-
   if (!isInitialized) return null;
 
   return (
@@ -105,7 +85,6 @@ const App: React.FC = () => {
           activeView={currentView}
           onViewChange={setCurrentView}
           activeNotebookTitle={activeNotebook?.title}
-          activeNotebookColor={activeNotebook?.color}
           onBackToShelf={() => setCurrentView('shelf')}
         />
       )}
@@ -131,18 +110,15 @@ const App: React.FC = () => {
         ) : currentView === 'research' ? (
           <ResearchHub 
             notes={activeNotes.filter(n => n.type === 'research')}
-            context={activeNotes.slice(0, 5).map(n => n.content).join('\n')}
+            context={activeNotes.slice(0, 10).map(n => n.content).join('\n')}
             onAddResearch={(q, a, u) => addNote(a, 'research', { question: q, metadata: { urls: u } })}
             onPin={(note) => addNote(note.content, 'ledger')}
             onDelete={deleteNote}
-            onRequestKey={handleRequestKey}
-            manualApiKey={manualApiKey}
-            onSaveManualKey={setManualApiKey}
           />
         ) : (
           <RawTextEditor 
             allNotes={activeNotes}
-            notebookTitle={activeNotebook?.title || 'Export'}
+            notebookTitle={activeNotebook?.title || 'Ledger'}
           />
         )}
       </main>
@@ -152,7 +128,7 @@ const App: React.FC = () => {
           Checksum: {versionHash}
         </div>
         <div className="text-[9px] font-mono text-slate-300 uppercase">
-          Project Ledger v1.0
+          Steno Ledger Core v1.2
         </div>
       </footer>
     </div>

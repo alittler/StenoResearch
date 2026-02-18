@@ -6,7 +6,6 @@ interface NavigationProps {
   activeView: AppView;
   onViewChange: (view: AppView) => void;
   activeNotebookTitle?: string;
-  activeNotebookColor?: string;
   onBackToShelf: () => void;
 }
 
@@ -14,11 +13,10 @@ const Navigation: React.FC<NavigationProps> = ({
   activeView, 
   onViewChange, 
   activeNotebookTitle, 
-  activeNotebookColor = '#1e293b',
   onBackToShelf 
 }) => {
   const tabs: { id: AppView; label: string; icon: string }[] = [
-    { id: 'ledger', label: 'Notes', icon: '📝' },
+    { id: 'ledger', label: 'StenoPad', icon: '📝' },
     { id: 'research', label: 'Research', icon: '🔍' },
     { id: 'raw', label: 'Export', icon: '📄' },
   ];
@@ -30,24 +28,24 @@ const Navigation: React.FC<NavigationProps> = ({
           <button 
             onClick={onBackToShelf}
             className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"
-            title="Switch Ledger"
+            title="Project Shelf"
           >
             <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="font-bold text-sm text-slate-900 truncate max-w-[120px] sm:max-w-none">
+          <span className="font-bold text-sm text-slate-900 truncate max-w-[150px]">
             {activeNotebookTitle}
           </span>
         </div>
 
-        <div className="flex gap-1 sm:gap-4">
+        <div className="flex gap-1 sm:gap-2">
           {tabs.map((tab) => (
             <button 
               key={tab.id} 
               onClick={() => onViewChange(tab.id)} 
               className={`
-                px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-bold transition-all
+                px-3 py-1.5 rounded-lg flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all
                 ${activeView === tab.id 
                   ? 'bg-slate-900 text-white shadow-md'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
