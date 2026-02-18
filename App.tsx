@@ -158,6 +158,7 @@ const App: React.FC = () => {
               onAddResearch={(q, a, u) => addNote(a, 'research', { question: q, metadata: { urls: u } })}
               onPin={(note) => addNote(`📌 PINNED RESEARCH:\n${note.content}`, 'ledger')}
               onDelete={deleteNote}
+              onRequestKey={() => window.aistudio.openSelectKey()}
             />
           )}
 

@@ -10,9 +10,10 @@ interface ResearchHubProps {
   onAddResearch: (question: string, answer: string, urls: string[]) => void;
   onPin: (note: ProjectNote) => void;
   onDelete: (id: string) => void;
+  onRequestKey: () => void;
 }
 
-const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch, onPin, onDelete }) => {
+const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch, onPin, onDelete, onRequestKey }) => {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +29,8 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
       const result = await askResearchQuestion(query, context);
       onAddResearch(query, result.text, result.urls);
       setQuery('');
-    } catch (err) {
-      setError("AI Service unavailable. Ensure your configuration is correct.");
+    } catch (err: any) {
+      setError("AI Service connection failed. This typically indicates an invalid or missing API Key.");
     } finally {
       setIsLoading(false);
     }
@@ -58,7 +59,20 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
             {isLoading ? "Executing Search..." : "Execute Scan"}
           </button>
         </form>
-        {error && <p className="text-red-400 text-center text-[10px] font-bold uppercase mt-4 tracking-wider">{error}</p>}
+        
+        {error && (
+          <div className="mt-6 p-4 bg-red-950/30 border border-red-900/50 rounded-xl flex flex-col items-center gap-3">
+            <p className="text-red-400 text-center text-[10px] font-bold uppercase tracking-wider">
+              {error}
+            </p>
+            <button 
+              onClick={onRequestKey}
+              className="text-[10px] font-black font-mono text-blue-400 hover:text-blue-300 uppercase tracking-[0.2em] underline decoration-blue-900 underline-offset-4 transition-colors"
+            >
+              Reconfigure API Credentials
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
