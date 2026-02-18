@@ -26,10 +26,12 @@ const Navigation: React.FC<NavigationProps> = ({
   activeNotebookColor = '#1e293b',
   onBackToShelf 
 }) => {
-  const tabs: { id: AppView; label: string; icon: string }[] = [
+  const tabs: { id: any; label: string; icon: string }[] = [
     { id: 'dashboard', label: 'Home', icon: '🏠' },
     { id: 'ledger', label: 'Pad', icon: '📝' },
     { id: 'research', label: 'Scan', icon: '🔍' },
+    { id: 'outlines', label: 'Weave', icon: '🧶' },
+    { id: 'visualizer', label: 'Vision', icon: '📸' },
     { id: 'raw', label: 'Raw', icon: '📄' },
   ];
 

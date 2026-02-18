@@ -1,7 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ProjectNote } from '../types';
-import { marked } from 'marked';
 
 interface StenoPadProps {
   notes: ProjectNote[];
@@ -46,11 +45,13 @@ const StenoPad: React.FC<StenoPadProps> = ({ notes, onAddNote, onDeleteNote }) =
         </div>
 
         <div className="flex-1 steno-paper p-10 md:p-16 relative overflow-hidden">
-          {/* Main Input Area */}
           <div className="relative z-10 space-y-8">
-            <div className="flex items-center gap-4 mb-4">
-              <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 font-mono">Ledger Entry</span>
-              <div className="h-[1px] flex-1 bg-stone-200"></div>
+            <div className="flex items-center justify-between mb-4 border-b border-stone-300 pb-2">
+              <div className="flex items-center gap-4">
+                <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 font-mono">Ledger Entry</span>
+              </div>
+              <div className="h-[1px] flex-1 bg-stone-200 mx-4 hidden md:block"></div>
+              <div className="text-[8px] font-mono font-black text-stone-300 uppercase tracking-tighter">Verified Content-Addressable Ledger</div>
             </div>
             
             <textarea
@@ -58,7 +59,7 @@ const StenoPad: React.FC<StenoPadProps> = ({ notes, onAddNote, onDeleteNote }) =
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="What's the status?"
+              placeholder="Record the current status..."
               className="w-full bg-transparent border-none text-2xl md:text-3xl font-serif-italic text-stone-800 focus:ring-0 outline-none resize-none overflow-hidden placeholder:text-stone-300 leading-[32px] pt-1"
               autoFocus
             />
@@ -73,14 +74,19 @@ const StenoPad: React.FC<StenoPadProps> = ({ notes, onAddNote, onDeleteNote }) =
               </button>
             </div>
 
-            {/* Past Notes */}
+            {/* Past Notes with SHA/Date display */}
             <div className="mt-20 space-y-16 pb-32">
               {notes.map((note, idx) => (
                 <div key={note.id} className="group relative">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-[9px] font-mono font-bold text-stone-400 uppercase tracking-widest">
-                      #{notes.length - idx} — {new Date(note.timestamp).toLocaleTimeString()}
-                    </span>
+                  <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-2">
+                    <div className="flex items-center gap-4">
+                        <span className="text-[10px] font-black text-blue-600 font-mono uppercase tracking-tighter">
+                          SHA: {(note.hash || note.id).substring(0, 12).toUpperCase()}
+                        </span>
+                        <span className="text-[9px] font-mono font-bold text-stone-400 uppercase tracking-widest">
+                          ENTRY #{notes.length - idx} — {new Date(note.timestamp).toLocaleString()}
+                        </span>
+                    </div>
                     <button 
                       onClick={() => onDeleteNote(note.id)} 
                       className="opacity-0 group-hover:opacity-100 p-2 text-stone-300 hover:text-red-500 transition-all"
@@ -90,11 +96,16 @@ const StenoPad: React.FC<StenoPadProps> = ({ notes, onAddNote, onDeleteNote }) =
                       </svg>
                     </button>
                   </div>
-                  <div className="font-serif-italic text-xl md:text-2xl text-stone-700 leading-[32px]">
+                  <div className="font-serif-italic text-xl md:text-2xl text-stone-700 leading-[32px] whitespace-pre-wrap">
                     {note.content}
                   </div>
                 </div>
               ))}
+              {notes.length === 0 && (
+                  <div className="text-center py-20 opacity-20 italic font-serif text-2xl">
+                    Ledger is currently empty. Start writing to begin the history.
+                  </div>
+              )}
             </div>
           </div>
         </div>
