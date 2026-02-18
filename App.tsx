@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ProjectNote, AppView, Notebook } from './types';
 import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
@@ -8,8 +8,8 @@ import ResearchHub from './components/ResearchHub';
 import RawTextEditor from './components/RawTextEditor';
 import NotebookShelf from './components/NotebookShelf';
 
-const STORAGE_KEY = 'ledger_core_v3';
-const BUILD_SHA = '9a2c4e8'; // Updated build identifier
+const STORAGE_KEY = 'ledger_core_v3_persistent';
+const BUILD_SHA = '9a2c4e8';
 
 const INITIAL_NOTEBOOKS: Notebook[] = [
   { id: 'general', title: 'Primary Project Ledger', color: '#1e293b', createdAt: Date.now() }
@@ -22,52 +22,70 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('shelf');
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasUnsavedExport, setHasUnsavedExport] = useState(false);
+  const [userHasInteracted, setUserHasInteracted] = useState(false);
 
-  // Load persistence from local cache
+  // Load from local cache
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setNotebooks(parsed.notebooks || INITIAL_NOTEBOOKS);
-        setNotes(parsed.notes || []);
-        // If we just loaded, we assume it's "saved" relative to the last export status 
-        // (Simplified logic: we set unsaved export to true on any future change)
+        if (parsed.notebooks) setNotebooks(parsed.notebooks);
+        if (parsed.notes) setNotes(parsed.notes);
       } catch (e) {
-        console.error("Persistence error", e);
+        console.error("Local cache restoration failed", e);
       }
     }
     setIsInitialized(true);
   }, []);
 
-  // Sync to local cache on every change
+  // Save to local cache on every change
   useEffect(() => {
     if (isInitialized) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ notebooks, notes }));
     }
   }, [notebooks, notes, isInitialized]);
 
-  // Track changes for export warning
-  useEffect(() => {
+  // Track if changes happened since last export
+  const handleDataChange = useCallback(() => {
     if (isInitialized) {
-      // Any time notebooks or notes change, we mark the export as "dirty"
       setHasUnsavedExport(true);
     }
-  }, [notebooks, notes]);
+  }, [isInitialized]);
 
-  // Handle "Warn on Exit" browser event
+  useEffect(() => {
+    if (isInitialized) {
+      // Small delay to prevent initial load from triggering unsaved state
+      const timeout = setTimeout(() => {
+        handleDataChange();
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [notes, notebooks, isInitialized]);
+
+  // Warn on exit
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedExport) {
-        const message = "You have unsaved changes that haven't been exported. Are you sure you want to exit?";
-        e.returnValue = message;
+      if (hasUnsavedExport && userHasInteracted) {
+        const message = "You have unsaved changes that have not been exported to JSON. Exit anyway?";
+        e.preventDefault();
+        e.returnValue = message; // Standard for most browsers
         return message;
       }
     };
 
+    const handleInteraction = () => setUserHasInteracted(true);
+
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedExport]);
+    window.addEventListener('mousedown', handleInteraction);
+    window.addEventListener('keydown', handleInteraction);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('mousedown', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+  }, [hasUnsavedExport, userHasInteracted]);
 
   const activeNotebook = useMemo(() => 
     notebooks.find(nb => nb.id === activeNotebookId), 
@@ -121,6 +139,7 @@ const App: React.FC = () => {
       setNotebooks(data.notebooks);
       setNotes(data.notes);
       setHasUnsavedExport(false);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ notebooks: data.notebooks, notes: data.notes }));
     }
   };
 
@@ -202,13 +221,12 @@ const App: React.FC = () => {
       <footer className="py-4 px-6 bg-white border-t border-slate-200 flex justify-between items-center text-[10px] font-mono uppercase tracking-widest">
         <div className="flex items-center gap-6">
           <span className="text-slate-300 font-bold">&copy; Project Ledger Core</span>
-          {hasUnsavedExport && (
+          {hasUnsavedExport ? (
             <div className="flex items-center gap-2 text-amber-500 font-black animate-pulse">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-              UNSYNCED EXPORT
+              UNSYNCED EXPORT (EXIT WARNING ACTIVE)
             </div>
-          )}
-          {!hasUnsavedExport && (
+          ) : (
             <div className="flex items-center gap-2 text-emerald-400 font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
               BACKED UP
