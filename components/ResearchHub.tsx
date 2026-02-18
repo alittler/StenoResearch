@@ -27,11 +27,10 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<React.ReactNode | null>(null);
   const [tempKey, setTempKey] = useState(manualApiKey);
   const [showSettings, setShowSettings] = useState(false);
 
-  // Automatically show settings if no key is found
   useEffect(() => {
     if (!manualApiKey && (!process.env.API_KEY || process.env.API_KEY === 'undefined')) {
       setShowSettings(true);
@@ -51,13 +50,29 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
       setQuery('');
     } catch (err: any) {
       console.error("Research Hub Caught Error:", err);
-      if (err.message === "API_KEY_MISSING") {
-        setError("Missing API Key. Please enter one in 'Settings' or use the Project Key button.");
+      
+      const detailedMessage = err.message || "";
+      
+      if (detailedMessage === "API_KEY_MISSING") {
+        setError("AI Credentials Missing. Provide a key in Settings to begin.");
+        setShowSettings(true);
+      } else if (detailedMessage.includes("429") || detailedMessage.includes("RESOURCE_EXHAUSTED")) {
+        setError(
+          <div className="space-y-2">
+            <p className="font-bold">Quota Exceeded (429)</p>
+            <p className="text-[9px] leading-relaxed">Your project has reached its free-tier rate limit. To remove this limit, upgrade to a paid plan in the Google Cloud Console.</p>
+            <a 
+              href="https://ai.google.dev/gemini-api/docs/billing" 
+              target="_blank" 
+              className="inline-block text-blue-400 underline font-black text-[9px] uppercase tracking-widest mt-2"
+            >
+              Billing Documentation »
+            </a>
+          </div>
+        );
         setShowSettings(true);
       } else {
-        // Extract real message from the API error
-        const detailedMessage = err.message || JSON.stringify(err);
-        setError(`Connection Failed: ${detailedMessage}`);
+        setError(`Connection Failed: ${detailedMessage.substring(0, 100)}...`);
       }
     } finally {
       setIsLoading(false);
@@ -66,7 +81,6 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
 
   const handleUpdateKey = () => {
     onSaveManualKey(tempKey);
-    // Don't auto-hide settings so user can see it worked
     setError(null);
   };
 
@@ -82,7 +96,7 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
             onClick={() => setShowSettings(!showSettings)}
             className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${showSettings ? 'text-blue-400' : 'text-stone-500 hover:text-stone-300'}`}
           >
-            {showSettings ? 'Hide Settings' : 'Settings'}
+            {showSettings ? 'System Settings' : 'Settings'}
           </button>
         </h2>
         
@@ -111,41 +125,62 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
           <div className="mt-8 p-6 bg-stone-800/30 border-2 border-stone-800 rounded-2xl space-y-6 animate-fade-in">
             {error && (
               <div className="p-4 bg-red-900/20 border border-red-900/50 rounded-lg">
-                <p className="text-red-400 text-[10px] font-black uppercase tracking-wider text-center">
+                <div className="text-red-400 text-[10px] font-black uppercase tracking-wider text-center">
                   {error}
-                </p>
+                </div>
               </div>
             )}
 
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest">Manual API Configuration</p>
-                <button 
-                  onClick={onRequestKey}
-                  className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:underline"
-                >
-                  Select AI Studio Project Key
-                </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest">Manual API Configuration</p>
+                  <button 
+                    onClick={onRequestKey}
+                    className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:underline"
+                  >
+                    Use Browser Keychain
+                  </button>
+                </div>
+                
+                <div className="flex flex-col gap-3">
+                  <input 
+                    type="password"
+                    value={tempKey}
+                    onChange={(e) => setTempKey(e.target.value)}
+                    placeholder="Paste Gemini API Key..."
+                    className="w-full bg-stone-950 border border-stone-700 rounded-xl px-4 py-3 text-white font-mono text-xs focus:border-blue-500 outline-none placeholder:text-stone-700 shadow-inner"
+                  />
+                  <button 
+                    onClick={handleUpdateKey}
+                    className="w-full py-3 bg-stone-100 text-stone-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all active:scale-95 whitespace-nowrap"
+                  >
+                    Save & Apply
+                  </button>
+                </div>
               </div>
-              
-              <div className="flex flex-col sm:flex-row gap-3">
-                <input 
-                  type="password"
-                  value={tempKey}
-                  onChange={(e) => setTempKey(e.target.value)}
-                  placeholder="Paste Gemini API Key..."
-                  className="flex-1 bg-stone-950 border border-stone-700 rounded-xl px-4 py-3 text-white font-mono text-xs focus:border-blue-500 outline-none placeholder:text-stone-700 shadow-inner"
-                />
-                <button 
-                  onClick={handleUpdateKey}
-                  className="px-6 py-3 bg-stone-100 text-stone-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all active:scale-95 whitespace-nowrap"
-                >
-                  Save & Apply
-                </button>
+
+              <div className="space-y-4 border-l border-stone-800 pl-8 hidden md:block">
+                <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest">System Specifications</p>
+                <div className="space-y-3 font-mono text-[9px] uppercase">
+                   <div className="flex justify-between">
+                     <span className="text-stone-600">Primary Core</span>
+                     <span className="text-stone-400">Gemini 3 Pro Preview</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span className="text-stone-600">Visual Core</span>
+                     <span className="text-stone-400">Gemini 2.5 Flash Image</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span className="text-stone-600">Search Layer</span>
+                     <span className="text-stone-400">Google Grounding V1</span>
+                   </div>
+                </div>
+                <p className="text-[8px] text-stone-600 italic leading-relaxed pt-2">
+                  Pro-tier models provide enhanced reasoning but consume higher API quota. 
+                  Switch to a paid plan to remove 429 limits.
+                </p>
               </div>
-              <p className="text-[8px] text-stone-600 uppercase font-mono italic text-center">
-                Manual keys are stored in local storage for this session.
-              </p>
             </div>
           </div>
         )}

@@ -18,9 +18,6 @@ export interface Notebook {
   title: string;
   color: string;
   createdAt: number;
-  coreConcept?: string;
 }
 
-export type AppView = 'shelf' | 'dashboard' | 'ledger' | 'research' | 'raw';
-
-export type AppMode = 'ledger' | 'research';
+export type AppView = 'ledger' | 'research' | 'raw' | 'shelf';
