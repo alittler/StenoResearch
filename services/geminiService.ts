@@ -2,39 +2,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 /**
- * Helper to extract meaningful error messages from Gemini API errors
+ * Performs research using Google Search grounding.
+ * Uses project context to provide relevant data for the specific project.
  */
-function handleApiError(error: any): never {
-  console.error("Gemini API Error:", error);
-  let message = error.message || "";
-  let status = error.status;
-
-  try {
-    if (message.startsWith('{')) {
-      const parsed = JSON.parse(message);
-      message = parsed.error?.message || message;
-      status = parsed.error?.code || status;
-    }
-  } catch (e) { /* ignore */ }
-
-  if (status === 429 || message.includes("quota") || message.includes("RESOURCE_EXHAUSTED")) {
-    throw new Error("QUOTA_EXCEEDED");
-  }
-  throw new Error(message || "An unexpected network error occurred.");
-}
-
-/**
- * RESEARCH: Uses Gemini 3 Flash for speed and search grounding.
- */
-export async function askResearchQuestion(question: string, context: string): Promise<{ text: string, urls: string[] }> {
+export async function askResearchQuestion(question: string, context: string) {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Project Context: ${context}\n\nResearch Inquiry: ${question}`,
+      contents: `Current Project Context:\n${context}\n\nResearch Inquiry: ${question}`,
       config: {
-        systemInstruction: "You are an expert researcher. Use Google Search to find current data. Be concise and factual.",
+        systemInstruction: "You are an expert project analyst and researcher. Provide highly factual, concise information. Do not use greetings or conversational filler. Use Markdown for structuring data.",
         tools: [{ googleSearch: {} }],
       },
     });
@@ -44,96 +22,128 @@ export async function askResearchQuestion(question: string, context: string): Pr
       .filter(Boolean) || [];
 
     return {
-      text: response.text || "No data found.",
+      text: response.text || "No specific data found.",
       urls: Array.from(new Set(urls)),
     };
-  } catch (error: any) {
-    handleApiError(error);
+  } catch (error) {
+    console.error("AI Research Error:", error);
+    throw error;
   }
 }
 
 /**
- * SYNTHESIS: Uses Gemini 3 Pro for complex reasoning.
+ * Synthesizes notes and research into a cohesive project outline.
  */
-export async function weaveProjectOutline(notes: {content: string, timestamp: number}[], research: string[]): Promise<{ text: string }> {
+export async function weaveProjectOutline(notes: { content: string, timestamp: number }[], research: string[]) {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const notesContext = notes.map(n => `[${new Date(n.timestamp).toISOString()}] ${n.content}`).join('\n');
-  const researchContext = research.join('\n');
-  
   try {
+    // Sort notes by timestamp to prioritize newer entries in prompt
+    const sortedNotes = [...notes].sort((a, b) => b.timestamp - a.timestamp);
+    const notesCtx = sortedNotes.map(n => `- ${n.content}`).join('\n');
+    const researchCtx = research.join('\n\n');
+
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: `Synthesize a comprehensive project outline. Newer notes should resolve conflicts.
-      
-      ### PROJECT NOTES
-      ${notesContext}
-      
-      ### RESEARCH DATA
-      ${researchContext}`,
+      model: 'gemini-3-flash-preview',
+      contents: `Project Notes:\n${notesCtx}\n\nResearch Context:\n${researchCtx}`,
       config: {
-        systemInstruction: "You are a master project architect. Create a structured, hierarchical project brief in Markdown format.",
-      }
+        systemInstruction: "You are a professional project architect. Synthesize the provided notes and research into a logical, hierarchical project outline. Prioritize information from more recent notes if conflicts occur. Use Markdown for clear structure.",
+      },
     });
 
-    return { text: response.text || "Synthesis resulted in no content." };
-  } catch (error: any) {
-    handleApiError(error);
+    return { text: response.text || "" };
+  } catch (error) {
+    console.error("AI Synthesis Error:", error);
+    throw error;
   }
 }
 
 /**
- * VISUALIZATION: Generates a concept image using Gemini 2.5 Flash Image.
+ * Generates a concept visualization image based on a prompt.
  */
-export async function generateProjectImage(prompt: string): Promise<string> {
+export async function generateProjectImage(prompt: string) {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
-      contents: {
-        parts: [{ text: prompt }],
+      contents: prompt,
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1",
+        },
       },
     });
 
-    const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
-    if (!part?.inlineData) throw new Error("No image data returned from model.");
-
-    return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-  } catch (error: any) {
-    handleApiError(error);
+    // Find the image part in the response
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+      }
+    }
+    throw new Error("No image data returned from model.");
+  } catch (error) {
+    console.error("AI Image Generation Error:", error);
+    throw error;
   }
 }
 
 /**
- * ARCHITECTURE: Shatters a wall of text into atomic project notes.
+ * Processes a wall of text into structured, atomic notes.
  */
-export async function shredWallOfText(text: string): Promise<any[]> {
+export async function shredWallOfText(text: string) {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Shatter the following project data into atomic, structured notes:\n\n${text}`,
+      model: 'gemini-3-flash-preview',
+      contents: `Process the following raw text into a list of atomic project notes:\n\n${text}`,
       config: {
-        systemInstruction: "You are a Knowledge Architect. Parse raw text into structured JSON records.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
           items: {
             type: Type.OBJECT,
             properties: {
-              title: { type: Type.STRING },
-              content: { type: Type.STRING },
-              category: { type: Type.STRING },
-              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-              is_priority: { type: Type.BOOLEAN },
+              title: {
+                type: Type.STRING,
+                description: 'A short, punchy title for the note.',
+              },
+              content: {
+                type: Type.STRING,
+                description: 'The core descriptive content of the note.',
+              },
+              category: {
+                type: Type.STRING,
+                description: 'A category label (e.g., Logic, Resource, Design).',
+              },
+              tags: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: 'Related keyword tags.',
+              },
+              links: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: 'Extracted URLs found in the text.',
+              },
+              is_priority: {
+                type: Type.BOOLEAN,
+                description: 'Whether the note seems critically important.',
+              },
+              raw_source_id: {
+                type: Type.STRING,
+                description: 'A identifier for the source chunk.',
+              },
             },
             required: ["title", "content", "category"],
-          }
-        }
+            propertyOrdering: ["title", "content", "category", "tags", "links", "is_priority", "raw_source_id"],
+          },
+        },
       },
     });
 
-    return JSON.parse(response.text || "[]");
-  } catch (error: any) {
-    handleApiError(error);
+    const jsonStr = response.text || "[]";
+    return JSON.parse(jsonStr.trim());
+  } catch (error) {
+    console.error("AI Text Shredding Error:", error);
+    throw error;
   }
 }

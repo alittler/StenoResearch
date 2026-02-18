@@ -28,7 +28,6 @@ const NotebookShelf: React.FC<NotebookShelfProps> = ({
   onSelect, 
   onAdd, 
   onDelete, 
-  hasUnsavedChanges,
   onBackupPerformed,
   onRestore
 }) => {
@@ -93,23 +92,10 @@ const NotebookShelf: React.FC<NotebookShelfProps> = ({
           <p className="text-slate-500 text-sm mt-1 uppercase font-black text-[10px] tracking-widest">Select an active ledger</p>
         </div>
         
-        <div className="flex items-center gap-6">
-          {hasUnsavedChanges && (
-            <div className="hidden md:flex flex-col items-end">
-              <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Unsaved Export</span>
-              <span className="text-[8px] font-bold text-slate-300 uppercase">Backup recommended</span>
-            </div>
-          )}
-          <div className="flex gap-3">
-            <button 
-              onClick={handleExport} 
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all border ${hasUnsavedChanges ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 shadow-md' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
-            >
-              Export JSON
-            </button>
-            <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all border border-slate-200">Import</button>
-            <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleImport} />
-          </div>
+        <div className="flex gap-3">
+          <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all border border-slate-200">Export</button>
+          <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all border border-slate-200">Import</button>
+          <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleImport} />
         </div>
       </header>
 

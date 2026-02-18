@@ -22,7 +22,6 @@ const KnowledgeArchitect: React.FC<KnowledgeArchitectProps> = ({ onShredded, onA
 
     try {
       const results = await shredWallOfText(inputText);
-      // Fix: Added required 'type' property to comply with ProjectNote interface
       const newNotes: ProjectNote[] = results.map((r: any) => ({
         id: crypto.randomUUID(),
         title: r.title,
@@ -32,8 +31,7 @@ const KnowledgeArchitect: React.FC<KnowledgeArchitectProps> = ({ onShredded, onA
         links: r.links,
         is_priority: r.is_priority,
         raw_source_id: r.raw_source_id,
-        timestamp: Date.now(),
-        type: 'ledger'
+        timestamp: Date.now()
       }));
       setStagedNotes(newNotes);
     } catch (err: any) {

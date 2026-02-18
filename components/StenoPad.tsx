@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ProjectNote } from '../types';
+import { marked } from 'marked';
 
 interface StenoPadProps {
   notes: ProjectNote[];
@@ -34,77 +35,64 @@ const StenoPad: React.FC<StenoPadProps> = ({ notes, onAddNote, onDeleteNote }) =
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-6 px-4 animate-fade-in">
-      <div className="bg-[#fffdf2] rounded-xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] relative min-h-[80vh] flex flex-col border border-stone-300">
+    <div className="max-w-3xl mx-auto py-8 px-4 animate-fade-in">
+      <div className="bg-[#fffdf2] border-2 border-stone-200 rounded-t-[3rem] rounded-b-xl shadow-2xl relative min-h-[800px] flex flex-col paper-texture overflow-hidden">
         
-        {/* Top Bound Spiral */}
-        <div className="h-12 flex items-center justify-around px-8 bg-stone-100 rounded-t-xl border-b border-stone-300 relative">
+        {/* Top Spiral Binding */}
+        <div className="h-16 bg-stone-100 border-b border-stone-200 flex items-center justify-around px-10 relative z-20">
           {[...Array(12)].map((_, i) => (
-            <div key={i} className="w-5 h-8 spiral-bind rounded-full -mt-12 border border-stone-400 shadow-md"></div>
+            <div key={i} className="flex flex-col items-center">
+              <div className="w-5 h-10 bg-gradient-to-r from-stone-400 to-stone-200 rounded-full border border-stone-500 -mt-12 shadow-lg"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-stone-300 shadow-inner mt-2"></div>
+            </div>
           ))}
         </div>
 
-        <div className="flex-1 steno-paper p-10 md:p-16 relative overflow-hidden">
-          <div className="relative z-10 space-y-8">
-            <div className="flex items-center justify-between mb-4 border-b border-stone-300 pb-2">
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 font-mono">Ledger Entry</span>
-              </div>
-              <div className="h-[1px] flex-1 bg-stone-200 mx-4 hidden md:block"></div>
-              <div className="text-[8px] font-mono font-black text-stone-300 uppercase tracking-tighter">Verified Content-Addressable Ledger</div>
-            </div>
-            
-            <textarea
-              ref={textareaRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Record the current status..."
-              className="w-full bg-transparent border-none text-2xl md:text-3xl font-serif-italic text-stone-800 focus:ring-0 outline-none resize-none overflow-hidden placeholder:text-stone-300 leading-[32px] pt-1"
-              autoFocus
-            />
-
-            <div className="flex justify-end pt-4">
+        {/* Writing Surface */}
+        <div className="flex-1 relative p-10 md:p-16">
+          <div className="absolute left-16 md:left-24 top-0 bottom-0 w-[1.5px] bg-red-200 pointer-events-none"></div>
+          
+          <div className="pl-12 md:pl-20 space-y-12">
+            <div className="space-y-4">
+              <textarea
+                ref={textareaRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Write a project entry..."
+                className="w-full bg-transparent border-none text-2xl md:text-3xl font-serif italic text-stone-800 focus:ring-0 outline-none resize-none overflow-hidden placeholder:text-stone-200"
+              />
               <button 
                 onClick={handleAdd}
                 disabled={!inputValue.trim()}
-                className="px-6 py-2 bg-stone-900 text-white rounded font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all disabled:opacity-20 shadow-md"
+                className="px-6 py-2 bg-stone-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all disabled:opacity-20 shadow-md"
               >
                 Log Entry
               </button>
             </div>
 
-            {/* Past Notes with SHA/Date display */}
-            <div className="mt-20 space-y-16 pb-32">
-              {notes.map((note, idx) => (
-                <div key={note.id} className="group relative">
-                  <div className="flex justify-between items-center mb-4 border-b border-stone-200 pb-2">
-                    <div className="flex items-center gap-4">
-                        <span className="text-[10px] font-black text-blue-600 font-mono uppercase tracking-tighter">
-                          SHA: {(note.hash || note.id).substring(0, 12).toUpperCase()}
-                        </span>
-                        <span className="text-[9px] font-mono font-bold text-stone-400 uppercase tracking-widest">
-                          ENTRY #{notes.length - idx} — {new Date(note.timestamp).toLocaleString()}
-                        </span>
-                    </div>
+            <div className="space-y-16 pb-20">
+              {notes.map(note => (
+                <div key={note.id} className="group relative border-b border-blue-50/50 pb-8">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-[10px] font-mono text-stone-300 uppercase tracking-widest">
+                      {new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Record
+                    </span>
                     <button 
                       onClick={() => onDeleteNote(note.id)} 
-                      className="opacity-0 group-hover:opacity-100 p-2 text-stone-300 hover:text-red-500 transition-all"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-stone-300 hover:text-red-500 transition-all"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                      </svg>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                   </div>
-                  <div className="font-serif-italic text-xl md:text-2xl text-stone-700 leading-[32px] whitespace-pre-wrap">
-                    {note.content}
-                  </div>
+                  <div 
+                    className="prose-steno max-w-none prose-stone"
+                    dangerouslySetInnerHTML={{ __html: marked.parse(note.content) }}
+                  />
                 </div>
               ))}
               {notes.length === 0 && (
-                  <div className="text-center py-20 opacity-20 italic font-serif text-2xl">
-                    Ledger is currently empty. Start writing to begin the history.
-                  </div>
+                <p className="text-stone-200 font-serif italic text-3xl mt-20">The ledger is awaiting your first entry.</p>
               )}
             </div>
           </div>
