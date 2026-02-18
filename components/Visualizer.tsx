@@ -22,7 +22,8 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, apiKey, onAddImage, onDe
     setError(null);
 
     try {
-      const imageData = await generateProjectImage(prompt, apiKey);
+      // Fix: Removed the extra apiKey argument to match generateProjectImage(prompt: string) signature
+      const imageData = await generateProjectImage(prompt);
       onAddImage(prompt, imageData);
       setPrompt('');
     } catch (err: any) {

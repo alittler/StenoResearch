@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ProjectNote } from '../types';
 import { askResearchQuestion } from '../services/geminiService';
 import { marked } from 'marked';
@@ -21,17 +21,11 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
   onAddResearch, 
   onPin, 
   onDelete, 
-  onRequestKey 
+  onRequestKey
 }) => {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (apiKey) {
-      setError(null);
-    }
-  }, [apiKey]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,21 +35,12 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
     setError(null);
 
     try {
-      const result = await askResearchQuestion(query, context, apiKey);
+      const result = await askResearchQuestion(query, context);
       onAddResearch(query, result.text, result.urls);
       setQuery('');
     } catch (err: any) {
       console.error("Research Hub Caught Error:", err.message);
-      
-      if (err.message === "QUOTA_EXCEEDED") {
-        setError("QUOTA EXCEEDED: Your current API key has no remaining free requests. Please provide a different key with active billing.");
-      } else if (err.message === "MISSING_API_KEY") {
-        setError("API KEY MISSING: Please configure your Gemini API key to use research features.");
-      } else if (err.message === "INVALID_API_KEY") {
-        setError("INVALID API KEY: The provided key was rejected by Google. Verify the key and try again.");
-      } else {
-        setError(`RESEARCH FAILED: ${err.message}`);
-      }
+      setError(`RESEARCH FAILED: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +59,7 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
           <textarea 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask a specific project-related question..."
+            placeholder="What should we research next?"
             className="w-full bg-stone-800 border-2 border-stone-700 rounded-xl p-5 text-white text-lg font-mono focus:border-blue-500 outline-none transition-all resize-none h-32 placeholder:text-stone-600"
           />
           <button 
@@ -82,31 +67,14 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
             disabled={!query.trim() || isLoading}
             className="w-full py-4 bg-white text-stone-900 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-stone-100 transition-all flex items-center justify-center gap-3 disabled:opacity-30 shadow-lg active:translate-y-0.5"
           >
-            {isLoading ? "Executing Scan..." : "Execute Intelligence Scan"}
+            {isLoading ? "Executing Intelligence Scan..." : "Start Scan"}
           </button>
         </form>
 
         {error && (
-          <div className="mt-6 p-6 bg-red-950/40 border border-red-500/30 rounded-2xl flex flex-col items-center gap-5 relative z-10 animate-fade-in">
-            <div className="flex items-center gap-3 text-red-400">
-               <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-               <p className="text-[11px] font-black uppercase tracking-wider leading-relaxed text-center">{error}</p>
-            </div>
-            <div className="flex gap-3 w-full max-w-sm">
-              <button 
-                onClick={onRequestKey} 
-                className="flex-1 py-3 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-500 transition-all shadow-lg"
-              >
-                Change API Key
-              </button>
-              <a 
-                href="https://ai.google.dev/gemini-api/docs/billing" 
-                target="_blank"
-                className="px-6 py-3 bg-stone-800 text-stone-400 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:text-white transition-all flex items-center justify-center"
-              >
-                Check Billing
-              </a>
-            </div>
+          <div className="mt-6 p-4 bg-red-950/40 border border-red-500/30 rounded-xl flex items-center gap-3 text-red-400 animate-fade-in">
+             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+             <p className="text-[10px] font-black uppercase tracking-wider">{error}</p>
           </div>
         )}
       </div>
@@ -135,7 +103,7 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
         {notes.length === 0 && !isLoading && (
           <div className="col-span-full py-20 bg-stone-50/30 border-2 border-dashed border-stone-100 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 text-stone-300">
              <div className="text-5xl opacity-20">📡</div>
-             <p className="text-[10px] font-black uppercase tracking-[0.4em]">Awaiting Intelligence Briefing</p>
+             <p className="text-[10px] font-black uppercase tracking-[0.4em]">Empty Intelligence Hub</p>
           </div>
         )}
       </div>

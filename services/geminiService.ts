@@ -26,11 +26,8 @@ function handleApiError(error: any): never {
 /**
  * RESEARCH: Uses Gemini 3 Flash for speed and search grounding.
  */
-export async function askResearchQuestion(question: string, context: string, apiKeyOverride?: string): Promise<{ text: string, urls: string[] }> {
-  const apiKey = apiKeyOverride || process.env.API_KEY;
-  if (!apiKey) throw new Error("MISSING_API_KEY");
-
-  const ai = new GoogleGenAI({ apiKey });
+export async function askResearchQuestion(question: string, context: string): Promise<{ text: string, urls: string[] }> {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
     const response = await ai.models.generateContent({
@@ -56,117 +53,86 @@ export async function askResearchQuestion(question: string, context: string, api
 }
 
 /**
- * OUTLINE SYNTHESIS: Uses Gemini 3 Pro for complex reasoning and synthesis of multiple notes.
+ * SYNTHESIS: Uses Gemini 3 Pro for complex reasoning.
  */
-export async function weaveProjectOutline(
-  notepadNotes: { content: string; timestamp: number }[],
-  researchNotes: string[],
-  apiKeyOverride?: string
-): Promise<{ text: string }> {
-  const apiKey = apiKeyOverride || process.env.API_KEY;
-  if (!apiKey) throw new Error("MISSING_API_KEY");
-
-  const ai = new GoogleGenAI({ apiKey });
-  
-  // Format the inputs for the model to understand chronological order and research context.
-  const prompt = `
-    Synthesize the following project notes and research findings into a cohesive project outline.
-    Prioritize newer notes based on timestamps if there are conflicts.
-    
-    Notepad Entries:
-    ${notepadNotes.map(n => `[${new Date(n.timestamp).toISOString()}] ${n.content}`).join('\n')}
-    
-    Research Context:
-    ${researchNotes.join('\n')}
-  `;
+export async function weaveProjectOutline(notes: {content: string, timestamp: number}[], research: string[]): Promise<{ text: string }> {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const notesContext = notes.map(n => `[${new Date(n.timestamp).toISOString()}] ${n.content}`).join('\n');
+  const researchContext = research.join('\n');
   
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: prompt,
+      contents: `Synthesize a comprehensive project outline. Newer notes should resolve conflicts.
+      
+      ### PROJECT NOTES
+      ${notesContext}
+      
+      ### RESEARCH DATA
+      ${researchContext}`,
       config: {
-        systemInstruction: "You are a master strategist. Create a logical, structured project outline in Markdown format based on provided data. Ensure the output is concise but comprehensive.",
-      },
+        systemInstruction: "You are a master project architect. Create a structured, hierarchical project brief in Markdown format.",
+      }
     });
-    
-    return { text: response.text || "" };
+
+    return { text: response.text || "Synthesis resulted in no content." };
   } catch (error: any) {
     handleApiError(error);
   }
 }
 
 /**
- * IMAGE GENERATION: Uses Gemini 2.5 Flash Image to visualize project concepts.
+ * VISUALIZATION: Generates a concept image using Gemini 2.5 Flash Image.
  */
-export async function generateProjectImage(prompt: string, apiKeyOverride?: string): Promise<string> {
-  const apiKey = apiKeyOverride || process.env.API_KEY;
-  if (!apiKey) throw new Error("MISSING_API_KEY");
-
-  const ai = new GoogleGenAI({ apiKey });
-  
+export async function generateProjectImage(prompt: string): Promise<string> {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
-      contents: { parts: [{ text: prompt }] },
-      config: {
-        imageConfig: {
-          aspectRatio: "1:1"
-        }
-      }
+      contents: {
+        parts: [{ text: prompt }],
+      },
     });
 
-    // Iterate through parts to find the image part
-    const candidates = response.candidates;
-    if (candidates && candidates.length > 0) {
-      for (const part of candidates[0].content.parts) {
-        if (part.inlineData) {
-          const base64Data = part.inlineData.data;
-          return `data:${part.inlineData.mimeType};base64,${base64Data}`;
-        }
-      }
-    }
-    throw new Error("No image was returned by the model.");
+    const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
+    if (!part?.inlineData) throw new Error("No image data returned from model.");
+
+    return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
   } catch (error: any) {
     handleApiError(error);
   }
 }
 
 /**
- * KNOWLEDGE ARCHITECT: Shreds long unstructured text into atomic JSON-structured notes.
+ * ARCHITECTURE: Shatters a wall of text into atomic project notes.
  */
-export async function shredWallOfText(text: string, apiKeyOverride?: string): Promise<any[]> {
-  const apiKey = apiKeyOverride || process.env.API_KEY;
-  if (!apiKey) throw new Error("MISSING_API_KEY");
-
-  const ai = new GoogleGenAI({ apiKey });
-  
+export async function shredWallOfText(text: string): Promise<any[]> {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Analyze and shred the following text into atomic, actionable notes:\n\n${text}`,
+      model: "gemini-3-flash-preview",
+      contents: `Shatter the following project data into atomic, structured notes:\n\n${text}`,
       config: {
+        systemInstruction: "You are a Knowledge Architect. Parse raw text into structured JSON records.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
           items: {
             type: Type.OBJECT,
             properties: {
-              title: { type: Type.STRING, description: "A short, descriptive title for the note." },
-              content: { type: Type.STRING, description: "The core content or insight." },
-              category: { type: Type.STRING, description: "A high-level category like 'Idea', 'Research', 'Task', or 'Reference'." },
+              title: { type: Type.STRING },
+              content: { type: Type.STRING },
+              category: { type: Type.STRING },
               tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-              links: { type: Type.ARRAY, items: { type: Type.STRING } },
               is_priority: { type: Type.BOOLEAN },
-              raw_source_id: { type: Type.STRING }
             },
-            required: ["title", "content", "category"]
+            required: ["title", "content", "category"],
           }
         }
-      }
+      },
     });
-    
-    const resultText = response.text || "[]";
-    return JSON.parse(resultText.trim());
+
+    return JSON.parse(response.text || "[]");
   } catch (error: any) {
     handleApiError(error);
   }
