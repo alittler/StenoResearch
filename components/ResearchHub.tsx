@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ProjectNote } from '../types';
 import { askResearchQuestion } from '../services/geminiService';
@@ -30,7 +29,7 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
       onAddResearch(query, result.text, result.urls);
       setQuery('');
     } catch (err: any) {
-      setError("AI Service connection failed. This typically indicates an invalid or missing API Key.");
+      setError("AI Service connection failed. Verify your API Key or project billing status.");
     } finally {
       setIsLoading(false);
     }
@@ -61,13 +60,16 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
         </form>
         
         {error && (
-          <div className="mt-6 p-4 bg-red-950/30 border border-red-900/50 rounded-xl flex flex-col items-center gap-3">
+          <div className="mt-6 p-4 bg-red-950/30 border border-red-900/50 rounded-xl flex flex-col items-center gap-3 animate-pulse">
             <p className="text-red-400 text-center text-[10px] font-bold uppercase tracking-wider">
               {error}
             </p>
             <button 
-              onClick={onRequestKey}
-              className="text-[10px] font-black font-mono text-blue-400 hover:text-blue-300 uppercase tracking-[0.2em] underline decoration-blue-900 underline-offset-4 transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                onRequestKey();
+              }}
+              className="px-6 py-2 bg-red-500/10 text-[10px] font-black font-mono text-red-400 hover:bg-red-500 hover:text-white uppercase tracking-[0.2em] border border-red-500/30 rounded-lg transition-all active:scale-95"
             >
               Reconfigure API Credentials
             </button>
@@ -75,7 +77,7 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
         {notes.map(note => (
           <div key={note.id} className="bg-white p-6 rounded-2xl shadow-lg border border-stone-100 flex flex-col group relative">
             <div className="flex justify-between items-start mb-4">

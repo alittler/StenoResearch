@@ -1,9 +1,8 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
 /**
  * Performs research using Google Search grounding.
- * Uses project context to provide relevant data for the specific project.
+ * Uses gemini-3-flash-preview for best efficiency and TPM.
  */
 export async function askResearchQuestion(question: string, context: string) {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -37,7 +36,6 @@ export async function askResearchQuestion(question: string, context: string) {
 export async function weaveProjectOutline(notes: { content: string, timestamp: number }[], research: string[]) {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
-    // Sort notes by timestamp to prioritize newer entries in prompt
     const sortedNotes = [...notes].sort((a, b) => b.timestamp - a.timestamp);
     const notesCtx = sortedNotes.map(n => `- ${n.content}`).join('\n');
     const researchCtx = research.join('\n\n');
@@ -73,7 +71,6 @@ export async function generateProjectImage(prompt: string) {
       },
     });
 
-    // Find the image part in the response
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) {
         return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
@@ -102,39 +99,11 @@ export async function shredWallOfText(text: string) {
           items: {
             type: Type.OBJECT,
             properties: {
-              title: {
-                type: Type.STRING,
-                description: 'A short, punchy title for the note.',
-              },
-              content: {
-                type: Type.STRING,
-                description: 'The core descriptive content of the note.',
-              },
-              category: {
-                type: Type.STRING,
-                description: 'A category label (e.g., Logic, Resource, Design).',
-              },
-              tags: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
-                description: 'Related keyword tags.',
-              },
-              links: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
-                description: 'Extracted URLs found in the text.',
-              },
-              is_priority: {
-                type: Type.BOOLEAN,
-                description: 'Whether the note seems critically important.',
-              },
-              raw_source_id: {
-                type: Type.STRING,
-                description: 'A identifier for the source chunk.',
-              },
+              title: { type: Type.STRING },
+              content: { type: Type.STRING },
+              category: { type: Type.STRING },
             },
             required: ["title", "content", "category"],
-            propertyOrdering: ["title", "content", "category", "tags", "links", "is_priority", "raw_source_id"],
           },
         },
       },

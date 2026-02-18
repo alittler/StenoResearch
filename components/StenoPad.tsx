@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { ProjectNote } from '../types';
 import { marked } from 'marked';
@@ -35,7 +34,7 @@ const StenoPad: React.FC<StenoPadProps> = ({ notes, onAddNote, onDeleteNote }) =
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4 animate-fade-in">
+    <div className="max-w-3xl mx-auto py-8 px-4 animate-fade-in relative">
       <div className="bg-[#fffdf2] border-2 border-stone-200 rounded-t-[3rem] rounded-b-xl shadow-2xl relative min-h-[800px] flex flex-col paper-texture overflow-hidden">
         
         {/* Top Spiral Binding */}
@@ -52,6 +51,11 @@ const StenoPad: React.FC<StenoPadProps> = ({ notes, onAddNote, onDeleteNote }) =
         <div className="flex-1 relative p-10 md:p-16">
           <div className="absolute left-16 md:left-24 top-0 bottom-0 w-[1.5px] bg-red-200 pointer-events-none"></div>
           
+          {/* Aesthetic Watermark */}
+          <div className="absolute bottom-8 right-8 select-none pointer-events-none opacity-[0.03] rotate-[-4deg]">
+             <span className="font-serif italic text-4xl md:text-6xl text-stone-900 lowercase font-bold">i fucking hate you</span>
+          </div>
+
           <div className="pl-12 md:pl-20 space-y-12">
             <div className="space-y-4">
               <textarea
@@ -92,7 +96,10 @@ const StenoPad: React.FC<StenoPadProps> = ({ notes, onAddNote, onDeleteNote }) =
                 </div>
               ))}
               {notes.length === 0 && (
-                <p className="text-stone-200 font-serif italic text-3xl mt-20">The ledger is awaiting your first entry.</p>
+                <div className="mt-20 flex flex-col gap-4">
+                  <p className="text-stone-200 font-serif italic text-3xl">The ledger is awaiting your first entry.</p>
+                  <p className="text-stone-100 font-serif italic text-xl opacity-30 select-none">i fucking hate you</p>
+                </div>
               )}
             </div>
           </div>

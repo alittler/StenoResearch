@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { ProjectNote, AppView, Notebook } from './types';
 import Navigation from './components/Navigation';
@@ -31,7 +30,6 @@ const App: React.FC = () => {
         const parsed = JSON.parse(saved);
         setNotebooks(parsed.notebooks || INITIAL_NOTEBOOKS);
         setNotes(parsed.notes || []);
-        // Restore previous hash if available, or generate a fresh one
         if (parsed.lastSaved) {
            generateSHA256(parsed.lastSaved).then(h => setVersionHash(h.substring(0, 16).toUpperCase()));
         }
@@ -47,8 +45,6 @@ const App: React.FC = () => {
     if (isInitialized) {
       const now = new Date().toISOString();
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ notebooks, notes, lastSaved: now }));
-      
-      // Update the visual version hash based on the timestamp of this specific update (shortened)
       generateSHA256(now).then(h => setVersionHash(h.substring(0, 16).toUpperCase()));
     }
   }, [notebooks, notes, isInitialized]);
@@ -101,7 +97,17 @@ const App: React.FC = () => {
     if (data.notebooks && data.notes) {
       setNotebooks(data.notebooks);
       setNotes(data.notes);
-      alert("Restore successful.");
+    }
+  };
+
+  const handleRequestKey = async () => {
+    // @ts-ignore
+    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+      // @ts-ignore
+      await window.aistudio.openSelectKey();
+    } else {
+      console.warn("AI Studio Key selection not available in this environment.");
+      alert("Key configuration dialog failed to open. Check system environment.");
     }
   };
 
@@ -158,7 +164,7 @@ const App: React.FC = () => {
               onAddResearch={(q, a, u) => addNote(a, 'research', { question: q, metadata: { urls: u } })}
               onPin={(note) => addNote(`📌 PINNED RESEARCH:\n${note.content}`, 'ledger')}
               onDelete={deleteNote}
-              onRequestKey={() => window.aistudio.openSelectKey()}
+              onRequestKey={handleRequestKey}
             />
           )}
 
