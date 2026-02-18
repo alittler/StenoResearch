@@ -12,7 +12,7 @@ import Visualizer from './components/Visualizer';
 
 const STORAGE_KEY = 'ledger_core_v3_persistent';
 const API_KEY_STORAGE_KEY = 'ledger_user_api_key';
-const BUILD_SHA = 'key-fix-v4';
+const BUILD_SHA = 'quota-fix-v5';
 
 const INITIAL_NOTEBOOKS: Notebook[] = [
   { id: 'general', title: 'Primary Project Ledger', color: '#1e293b', createdAt: Date.now() }
@@ -50,13 +50,6 @@ const App: React.FC = () => {
   }, [notebooks, notes, isInitialized]);
 
   useEffect(() => {
-    if (isInitialized) {
-      const timeout = setTimeout(() => setHasUnsavedExport(true), 500);
-      return () => clearTimeout(timeout);
-    }
-  }, [notes, notebooks, isInitialized]);
-
-  useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedExport && userHasInteracted) {
         e.preventDefault();
@@ -64,15 +57,8 @@ const App: React.FC = () => {
         return e.returnValue;
       }
     };
-    const handleInteraction = () => setUserHasInteracted(true);
     window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('mousedown', handleInteraction);
-    window.addEventListener('keydown', handleInteraction);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('mousedown', handleInteraction);
-      window.removeEventListener('keydown', handleInteraction);
-    };
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedExport, userHasInteracted]);
 
   const activeNotebook = useMemo(() => notebooks.find(nb => nb.id === activeNotebookId), [notebooks, activeNotebookId]);
@@ -89,20 +75,26 @@ const App: React.FC = () => {
       ...extra
     };
     setNotes(prev => [newNote, ...prev]);
+    setUserHasInteracted(true);
   };
 
   const deleteNote = (id: string) => setNotes(prev => prev.filter(n => n.id !== id));
 
   const handleRequestKey = async () => {
+    // FORCE the modal to open immediately
     setIsKeyModalOpen(true);
+    // Optionally trigger system dialog if available
     if ((window as any).aistudio?.openSelectKey) {
-      await (window as any).aistudio.openSelectKey();
+      try {
+        await (window as any).aistudio.openSelectKey();
+      } catch (e) { console.warn("System key selector failed, using manual modal."); }
     }
   };
 
   const handleSaveKey = (key: string) => {
-    setGlobalApiKey(key);
-    localStorage.setItem(API_KEY_STORAGE_KEY, key);
+    const cleanKey = key.trim();
+    setGlobalApiKey(cleanKey);
+    localStorage.setItem(API_KEY_STORAGE_KEY, cleanKey);
     setIsKeyModalOpen(false);
   };
 
@@ -156,28 +148,33 @@ const App: React.FC = () => {
           <span className="text-slate-300 font-bold">PROJECT LEDGER CORE</span>
           <button onClick={handleRequestKey} className={`font-black flex items-center gap-2 ${globalApiKey ? 'text-emerald-500' : 'text-amber-500 animate-pulse'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${globalApiKey ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-            {globalApiKey ? 'API KEY ACTIVE' : 'SELECT API KEY'}
+            {globalApiKey ? 'API KEY ACTIVE' : 'KEY REQUIRED'}
           </button>
         </div>
         <div className="text-slate-300 font-bold">SHA: {BUILD_SHA}</div>
       </footer>
 
-      {/* Manual Key Modal */}
+      {/* Manual Key Modal - HIGH Z-INDEX */}
       {isKeyModalOpen && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-          <div className="bg-white rounded-[2rem] shadow-2xl p-8 w-full max-w-sm border border-slate-100">
-            <h2 className="text-xs font-black uppercase tracking-[0.3em] mb-4 text-slate-800">API Configuration</h2>
-            <p className="text-[11px] text-slate-500 mb-6 leading-relaxed">Enter your Gemini API Key. This is required for Research and Visualizer features.</p>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-lg animate-fade-in">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl p-10 w-full max-w-md border border-slate-100 flex flex-col items-center text-center">
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-3xl mb-6">🔑</div>
+            <h2 className="text-sm font-black uppercase tracking-[0.3em] mb-4 text-slate-800">API Key Configuration</h2>
+            <p className="text-[11px] text-slate-500 mb-8 leading-relaxed max-w-[280px]">
+              The current key is either missing or has exceeded its free quota. Please paste a <strong>paid-tier</strong> Gemini API key below.
+            </p>
             <input 
               type="password" placeholder="AIzaSy..."
-              className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-mono focus:border-blue-400 outline-none transition-all mb-6"
+              className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-mono focus:border-blue-400 outline-none transition-all mb-8 text-center"
               value={globalApiKey} onChange={(e) => setGlobalApiKey(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSaveKey(globalApiKey)}
+              autoFocus
             />
-            <div className="flex gap-3">
-              <button onClick={() => setIsKeyModalOpen(false)} className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Cancel</button>
-              <button onClick={() => handleSaveKey(globalApiKey)} className="flex-1 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">Save Key</button>
+            <div className="flex w-full gap-4">
+              <button onClick={() => setIsKeyModalOpen(false)} className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Dismiss</button>
+              <button onClick={() => handleSaveKey(globalApiKey)} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all">Apply Key</button>
             </div>
+            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="mt-8 text-[9px] font-bold text-blue-500 uppercase tracking-widest hover:underline">Learn about Gemini Billing →</a>
           </div>
         </div>
       )}

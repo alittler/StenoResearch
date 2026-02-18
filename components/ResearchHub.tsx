@@ -27,9 +27,8 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Clear error when key is updated
   useEffect(() => {
-    if (apiKey && (error?.includes("Key") || error?.includes("MISSING") || error?.includes("INVALID"))) {
+    if (apiKey) {
       setError(null);
     }
   }, [apiKey]);
@@ -46,17 +45,16 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
       onAddResearch(query, result.text, result.urls);
       setQuery('');
     } catch (err: any) {
-      console.error("Research Hub Error:", err);
-      // Map known error types to friendly messages, or show raw error for debugging
-      if (err.message === "MISSING_API_KEY") {
-        setError("API Key is missing. Please use the 'Select Key' button below.");
+      console.error("Research Hub Caught Error:", err.message);
+      
+      if (err.message === "QUOTA_EXCEEDED") {
+        setError("QUOTA EXCEEDED: Your current API key has no remaining free requests. Please provide a different key with active billing.");
+      } else if (err.message === "MISSING_API_KEY") {
+        setError("API KEY MISSING: Please configure your Gemini API key to use research features.");
       } else if (err.message === "INVALID_API_KEY") {
-        setError("The provided API Key is invalid or unauthorized. Please verify your billing or select a different key.");
-      } else if (err.message === "MODEL_NOT_AVAILABLE") {
-        setError("The Gemini model is not available for this key/region. Ensure you are using a paid-tier key if required.");
+        setError("INVALID API KEY: The provided key was rejected by Google. Verify the key and try again.");
       } else {
-        // Fallback to detailed message so the user can actually see what's wrong
-        setError(`Research Failed: ${err.message || 'Unknown network error'}`);
+        setError(`RESEARCH FAILED: ${err.message}`);
       }
     } finally {
       setIsLoading(false);
@@ -69,14 +67,14 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
         <h2 className="text-stone-100 font-black text-xs uppercase tracking-[0.4em] mb-6 flex items-center gap-2 relative z-10">
           <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-          Gathering Intelligence
+          Intelligence Scan
         </h2>
         
         <form onSubmit={handleSearch} className="space-y-4 relative z-10">
           <textarea 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask a project-related research question..."
+            placeholder="Ask a specific project-related question..."
             className="w-full bg-stone-800 border-2 border-stone-700 rounded-xl p-5 text-white text-lg font-mono focus:border-blue-500 outline-none transition-all resize-none h-32 placeholder:text-stone-600"
           />
           <button 
@@ -84,22 +82,31 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
             disabled={!query.trim() || isLoading}
             className="w-full py-4 bg-white text-stone-900 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-stone-100 transition-all flex items-center justify-center gap-3 disabled:opacity-30 shadow-lg active:translate-y-0.5"
           >
-            {isLoading ? "Executing Search..." : "Execute Scan"}
+            {isLoading ? "Executing Scan..." : "Execute Intelligence Scan"}
           </button>
         </form>
 
         {error && (
-          <div className="mt-6 p-5 bg-red-500/10 border border-red-500/20 rounded-xl flex flex-col items-center gap-4 relative z-10 animate-fade-in">
-            <div className="flex items-center gap-2 text-red-400">
-               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-               <p className="text-center text-[11px] font-black uppercase tracking-wider">{error}</p>
+          <div className="mt-6 p-6 bg-red-950/40 border border-red-500/30 rounded-2xl flex flex-col items-center gap-5 relative z-10 animate-fade-in">
+            <div className="flex items-center gap-3 text-red-400">
+               <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+               <p className="text-[11px] font-black uppercase tracking-wider leading-relaxed text-center">{error}</p>
             </div>
-            <button 
-              onClick={onRequestKey} 
-              className="w-full py-2 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-500 transition-all shadow-lg"
-            >
-              Select API Key
-            </button>
+            <div className="flex gap-3 w-full max-w-sm">
+              <button 
+                onClick={onRequestKey} 
+                className="flex-1 py-3 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-500 transition-all shadow-lg"
+              >
+                Change API Key
+              </button>
+              <a 
+                href="https://ai.google.dev/gemini-api/docs/billing" 
+                target="_blank"
+                className="px-6 py-3 bg-stone-800 text-stone-400 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:text-white transition-all flex items-center justify-center"
+              >
+                Check Billing
+              </a>
+            </div>
           </div>
         )}
       </div>
@@ -128,7 +135,7 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
         {notes.length === 0 && !isLoading && (
           <div className="col-span-full py-20 bg-stone-50/30 border-2 border-dashed border-stone-100 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 text-stone-300">
              <div className="text-5xl opacity-20">📡</div>
-             <p className="text-[10px] font-black uppercase tracking-[0.4em]">Ready for Intelligence Scan</p>
+             <p className="text-[10px] font-black uppercase tracking-[0.4em]">Awaiting Intelligence Briefing</p>
           </div>
         )}
       </div>
