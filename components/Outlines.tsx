@@ -37,10 +37,10 @@ const Outlines: React.FC<OutlinesProps> = ({
     setError(null);
 
     try {
+      // Fix: Removed manualApiKey argument as weaveProjectOutline accepts exactly 2 arguments.
       const { text } = await weaveProjectOutline(
         notepadNotes.map(n => ({ content: n.content, timestamp: n.timestamp })),
-        researchNotes.map(n => `Research Discovery: ${n.question}\n${n.content}`),
-        manualApiKey
+        researchNotes.map(n => `Research Discovery: ${n.question}\n${n.content}`)
       );
       onSaveOutline(text);
       setActiveOutlineId(null); 

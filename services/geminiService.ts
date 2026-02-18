@@ -5,44 +5,57 @@ import { GoogleGenAI, Type } from "@google/genai";
  * AI Service for Project Ledger using Google Gemini API.
  */
 
+// Internal helper to validate and retrieve the API key
+const getValidatedKey = () => {
+  const key = process.env.API_KEY;
+  if (!key || key === 'undefined' || key.trim() === '') {
+    throw new Error("API_KEY_MISSING");
+  }
+  return key;
+};
+
 // Helper to create AI instance using process.env.API_KEY exclusively.
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAI = () => {
+  const apiKey = getValidatedKey();
+  return new GoogleGenAI({ apiKey });
+};
 
 /**
  * Performs research using Gemini 3 Flash with Search Grounding.
  */
 export async function askResearchQuestion(question: string, context: string) {
-  const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Project Context:\n${context}\n\nResearch Inquiry: ${question}`,
-    config: {
-      systemInstruction: "You are an expert project researcher. Provide factual, concise information. Use Markdown for structuring data. Analyze the user's project context to provide tailored insights. Be professional and objective.",
-      tools: [{ googleSearch: {} }],
-    },
-  });
+  try {
+    const ai = getAI();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Project Context:\n${context}\n\nResearch Inquiry: ${question}`,
+      config: {
+        systemInstruction: "You are an expert project researcher. Provide factual, concise information. Use Markdown for structuring data. Analyze the user's project context to provide tailored insights. Be professional and objective.",
+        tools: [{ googleSearch: {} }],
+      },
+    });
 
-  // Extract search grounding URLs if available from the response groundingMetadata
-  const urls = response.candidates?.[0]?.groundingMetadata?.groundingChunks
-    ?.map((chunk: any) => chunk.web?.uri)
-    .filter(Boolean) || [];
+    // Extract search grounding URLs if available from the response groundingMetadata
+    const urls = response.candidates?.[0]?.groundingMetadata?.groundingChunks
+      ?.map((chunk: any) => chunk.web?.uri)
+      .filter(Boolean) || [];
 
-  return {
-    text: response.text || "No data received from engine.",
-    urls: urls
-  };
+    return {
+      text: response.text || "No data received from engine.",
+      urls: urls
+    };
+  } catch (error: any) {
+    if (error.message === "API_KEY_MISSING") throw error;
+    throw new Error(error.message || "Unknown Inference Error");
+  }
 }
 
 /**
  * Synthesizes notes and research into an outline using Gemini 3 Pro.
- * @param notes Array of notes with content and timestamp.
- * @param research Array of research summaries.
- * @param _manualApiKey Optional parameter kept for signature compatibility with existing calls.
  */
 export async function weaveProjectOutline(
   notes: { content: string, timestamp: number }[], 
-  research: string[],
-  _manualApiKey?: string
+  research: string[]
 ) {
   const ai = getAI();
   const notesContext = notes
@@ -63,10 +76,8 @@ export async function weaveProjectOutline(
 
 /**
  * Generates an image artifact using Gemini 2.5 Flash Image.
- * @param prompt Visual description.
- * @param _manualApiKey Optional parameter kept for signature compatibility with existing calls.
  */
-export async function generateProjectImage(prompt: string, _manualApiKey?: string) {
+export async function generateProjectImage(prompt: string) {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
@@ -77,7 +88,6 @@ export async function generateProjectImage(prompt: string, _manualApiKey?: strin
     },
   });
 
-  // Iterate through parts to find the image part (inlineData)
   for (const part of response.candidates?.[0]?.content?.parts || []) {
     if (part.inlineData) {
       return `data:image/png;base64,${part.inlineData.data}`;

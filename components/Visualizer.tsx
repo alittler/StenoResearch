@@ -22,8 +22,8 @@ const Visualizer: React.FC<VisualizerProps> = ({ notes, notepadContext, onAddIma
     setError(null);
 
     try {
-      // Use manualApiKey from props
-      const imageData = await generateProjectImage(prompt, manualApiKey);
+      // Fix: Removed manualApiKey argument as generateProjectImage accepts exactly 1 argument.
+      const imageData = await generateProjectImage(prompt);
       onAddImage(prompt, imageData);
       setPrompt('');
     } catch (err: any) {

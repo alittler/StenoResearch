@@ -20,7 +20,7 @@ const App: React.FC = () => {
   const [activeNotebookId, setActiveNotebookId] = useState<string | null>('general');
   const [currentView, setCurrentView] = useState<AppView>('ledger');
   const [isInitialized, setIsInitialized] = useState(false);
-  const [versionHash, setVersionHash] = useState<string>('INIT');
+  const [versionHash, setVersionHash] = useState<string>('INIT_SYNC');
 
   const lastStateString = useRef<string>('');
 
@@ -44,7 +44,7 @@ const App: React.FC = () => {
       if (dataString !== lastStateString.current) {
         localStorage.setItem(STORAGE_KEY, dataString);
         lastStateString.current = dataString;
-        generateSHA256(dataString).then(h => setVersionHash(h.substring(0, 4).toUpperCase()));
+        generateSHA256(dataString).then(h => setVersionHash(h.substring(0, 8).toUpperCase()));
       }
     }
   }, [notebooks, notes, isInitialized]);
@@ -123,12 +123,16 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <footer className="py-2 px-6 border-t border-slate-200 bg-white flex justify-between items-center">
-        <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">
-          Checksum: {versionHash}
+      <footer className="py-2.5 px-6 border-t border-slate-200 bg-white flex justify-between items-center shadow-[0_-1px_5px_rgba(0,0,0,0.02)]">
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+          <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
+            <span className="text-slate-400 font-bold">Project Hash:</span> 
+            <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-800 font-bold border border-slate-200/50">{versionHash}</span>
+          </div>
         </div>
-        <div className="text-[9px] font-mono text-slate-300 uppercase">
-          Steno Ledger Core v1.2
+        <div className="text-[9px] font-mono text-slate-300 uppercase tracking-tighter">
+          Steno Ledger Core v1.4 • {new Date().getFullYear()}
         </div>
       </footer>
     </div>
