@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ProjectNote } from '../types';
 import { askResearchQuestion } from '../services/geminiService';
@@ -29,7 +30,7 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
       onAddResearch(query, result.text, result.urls);
       setQuery('');
     } catch (err: any) {
-      setError("AI Service connection failed. Verify your API Key or project billing status.");
+      setError("AI Service connection failed. Verify your API_KEY is set in project settings or environment.");
     } finally {
       setIsLoading(false);
     }
@@ -71,8 +72,9 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
               }}
               className="px-6 py-2 bg-red-500/10 text-[10px] font-black font-mono text-red-400 hover:bg-red-500 hover:text-white uppercase tracking-[0.2em] border border-red-500/30 rounded-lg transition-all active:scale-95"
             >
-              Reconfigure API Credentials
+              Reconfigure System Credentials
             </button>
+            <p className="text-[8px] text-stone-500 uppercase tracking-widest font-bold">Manual input is handled by environment variables.</p>
           </div>
         )}
       </div>

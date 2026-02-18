@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { ProjectNote, AppView, Notebook } from './types';
 import Navigation from './components/Navigation';
@@ -17,10 +18,11 @@ const INITIAL_NOTEBOOKS: Notebook[] = [
 const App: React.FC = () => {
   const [notebooks, setNotebooks] = useState<Notebook[]>(INITIAL_NOTEBOOKS);
   const [notes, setNotes] = useState<ProjectNote[]>([]);
-  const [activeNotebookId, setActiveNotebookId] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<AppView>('shelf');
+  // Change default view to 'ledger' and select the general notebook to make it the "front page"
+  const [activeNotebookId, setActiveNotebookId] = useState<string | null>('general');
+  const [currentView, setCurrentView] = useState<AppView>('ledger');
   const [isInitialized, setIsInitialized] = useState(false);
-  const [versionHash, setVersionHash] = useState<string>('INIT-HASH-PENDING');
+  const [versionHash, setVersionHash] = useState<string>('INIT-HASH');
 
   // Load persistence
   useEffect(() => {
@@ -31,7 +33,7 @@ const App: React.FC = () => {
         setNotebooks(parsed.notebooks || INITIAL_NOTEBOOKS);
         setNotes(parsed.notes || []);
         if (parsed.lastSaved) {
-           generateSHA256(parsed.lastSaved).then(h => setVersionHash(h.substring(0, 16).toUpperCase()));
+           generateSHA256(parsed.lastSaved).then(h => setVersionHash(h.substring(0, 8).toUpperCase()));
         }
       } catch (e) {
         console.error("Failed to restore state", e);
@@ -45,7 +47,8 @@ const App: React.FC = () => {
     if (isInitialized) {
       const now = new Date().toISOString();
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ notebooks, notes, lastSaved: now }));
-      generateSHA256(now).then(h => setVersionHash(h.substring(0, 16).toUpperCase()));
+      // Shortened SHA to 8 characters for a cleaner look
+      generateSHA256(now).then(h => setVersionHash(h.substring(0, 8).toUpperCase()));
     }
   }, [notebooks, notes, isInitialized]);
 
@@ -101,13 +104,15 @@ const App: React.FC = () => {
   };
 
   const handleRequestKey = async () => {
+    // Attempting to trigger the platform's key selection dialog if available.
+    // Per security guidelines, manual text input fields for API keys are not provided.
     // @ts-ignore
     if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
       // @ts-ignore
       await window.aistudio.openSelectKey();
     } else {
       console.warn("AI Studio Key selection not available in this environment.");
-      alert("Key configuration dialog failed to open. Check system environment.");
+      alert("API Configuration: Please ensure your API_KEY environment variable is set in your project settings. Manual entry is disabled for security.");
     }
   };
 
@@ -119,7 +124,7 @@ const App: React.FC = () => {
         <NotebookShelf 
           notebooks={notebooks}
           notes={notes}
-          onSelect={(id) => { setActiveNotebookId(id); setCurrentView('dashboard'); }}
+          onSelect={(id) => { setActiveNotebookId(id); setCurrentView('ledger'); }}
           onAdd={handleCreateNotebook}
           onDelete={handleDeleteNotebook}
           hasUnsavedChanges={false}
@@ -189,7 +194,7 @@ const App: React.FC = () => {
           Ledger Version Integrity System
         </div>
         <div className="flex flex-col items-center md:items-end">
-          <span className="text-[9px] font-mono text-slate-300 uppercase tracking-tighter">STATE_VER_SIG_16</span>
+          <span className="text-[9px] font-mono text-slate-300 uppercase tracking-tighter">SIG_V8</span>
           <span className="text-[10px] font-mono text-blue-600 font-black tracking-widest text-center md:text-right selection:bg-blue-100">
             {versionHash}
           </span>
