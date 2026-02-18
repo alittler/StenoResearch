@@ -27,9 +27,9 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Clear error when key is updated
   useEffect(() => {
-    // If we were showing a key error and a key was just provided, clear it.
-    if (apiKey && error?.includes("Key")) {
+    if (apiKey && (error?.includes("Key") || error?.includes("MISSING") || error?.includes("INVALID"))) {
       setError(null);
     }
   }, [apiKey]);
@@ -47,10 +47,16 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
       setQuery('');
     } catch (err: any) {
       console.error("Research Hub Error:", err);
-      if (err.message === "MISSING_API_KEY" || err.message === "INVALID_API_KEY") {
-        setError("API Key issue detected. Please provide a valid key.");
+      // Map known error types to friendly messages, or show raw error for debugging
+      if (err.message === "MISSING_API_KEY") {
+        setError("API Key is missing. Please use the 'Select Key' button below.");
+      } else if (err.message === "INVALID_API_KEY") {
+        setError("The provided API Key is invalid or unauthorized. Please verify your billing or select a different key.");
+      } else if (err.message === "MODEL_NOT_AVAILABLE") {
+        setError("The Gemini model is not available for this key/region. Ensure you are using a paid-tier key if required.");
       } else {
-        setError("Research failed. Verify your network or query details.");
+        // Fallback to detailed message so the user can actually see what's wrong
+        setError(`Research Failed: ${err.message || 'Unknown network error'}`);
       }
     } finally {
       setIsLoading(false);
@@ -83,13 +89,16 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
         </form>
 
         {error && (
-          <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex flex-col items-center gap-3 relative z-10">
-            <p className="text-red-400 text-center text-[10px] font-bold uppercase tracking-wider">{error}</p>
+          <div className="mt-6 p-5 bg-red-500/10 border border-red-500/20 rounded-xl flex flex-col items-center gap-4 relative z-10 animate-fade-in">
+            <div className="flex items-center gap-2 text-red-400">
+               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+               <p className="text-center text-[11px] font-black uppercase tracking-wider">{error}</p>
+            </div>
             <button 
               onClick={onRequestKey} 
-              className="text-white bg-red-500/20 px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-500/40 transition-all"
+              className="w-full py-2 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-500 transition-all shadow-lg"
             >
-              Select Key
+              Select API Key
             </button>
           </div>
         )}
@@ -116,6 +125,12 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
             </div>
           </div>
         ))}
+        {notes.length === 0 && !isLoading && (
+          <div className="col-span-full py-20 bg-stone-50/30 border-2 border-dashed border-stone-100 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 text-stone-300">
+             <div className="text-5xl opacity-20">📡</div>
+             <p className="text-[10px] font-black uppercase tracking-[0.4em]">Ready for Intelligence Scan</p>
+          </div>
+        )}
       </div>
     </div>
   );
