@@ -2,14 +2,24 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 /**
+ * Helper to resolve the best available API key.
+ */
+function getApiKey(overrideKey?: string): string {
+  const key = (overrideKey && overrideKey.trim() !== '') ? overrideKey : process.env.API_KEY;
+  if (!key || key === 'undefined' || key.length < 5) {
+    throw new Error("API_KEY_MISSING");
+  }
+  return key;
+}
+
+/**
  * Performs research using Google Search grounding.
  * Uses gemini-3-flash-preview for best efficiency and TPM.
  */
 export async function askResearchQuestion(question: string, context: string, overrideKey?: string) {
-  const apiKey = overrideKey || process.env.API_KEY;
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-
+  const apiKey = getApiKey(overrideKey);
   const ai = new GoogleGenAI({ apiKey });
+  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -28,7 +38,7 @@ export async function askResearchQuestion(question: string, context: string, ove
       text: response.text || "No specific data found.",
       urls: Array.from(new Set(urls)),
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Research Error:", error);
     throw error;
   }
@@ -38,10 +48,9 @@ export async function askResearchQuestion(question: string, context: string, ove
  * Synthesizes notes and research into a cohesive project outline.
  */
 export async function weaveProjectOutline(notes: { content: string, timestamp: number }[], research: string[], overrideKey?: string) {
-  const apiKey = overrideKey || process.env.API_KEY;
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-
+  const apiKey = getApiKey(overrideKey);
   const ai = new GoogleGenAI({ apiKey });
+
   try {
     const sortedNotes = [...notes].sort((a, b) => b.timestamp - a.timestamp);
     const notesCtx = sortedNotes.map(n => `- ${n.content}`).join('\n');
@@ -56,7 +65,7 @@ export async function weaveProjectOutline(notes: { content: string, timestamp: n
     });
 
     return { text: response.text || "" };
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Synthesis Error:", error);
     throw error;
   }
@@ -66,10 +75,9 @@ export async function weaveProjectOutline(notes: { content: string, timestamp: n
  * Generates a concept visualization image based on a prompt.
  */
 export async function generateProjectImage(prompt: string, overrideKey?: string) {
-  const apiKey = overrideKey || process.env.API_KEY;
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-
+  const apiKey = getApiKey(overrideKey);
   const ai = new GoogleGenAI({ apiKey });
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
@@ -87,7 +95,7 @@ export async function generateProjectImage(prompt: string, overrideKey?: string)
       }
     }
     throw new Error("No image data returned from model.");
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Image Generation Error:", error);
     throw error;
   }
@@ -97,10 +105,9 @@ export async function generateProjectImage(prompt: string, overrideKey?: string)
  * Processes a wall of text into structured, atomic notes.
  */
 export async function shredWallOfText(text: string, overrideKey?: string) {
-  const apiKey = overrideKey || process.env.API_KEY;
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-
+  const apiKey = getApiKey(overrideKey);
   const ai = new GoogleGenAI({ apiKey });
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -124,7 +131,7 @@ export async function shredWallOfText(text: string, overrideKey?: string) {
 
     const jsonStr = response.text || "[]";
     return JSON.parse(jsonStr.trim());
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Text Shredding Error:", error);
     throw error;
   }

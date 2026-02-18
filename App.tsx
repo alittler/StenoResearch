@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ProjectNote, AppView, Notebook } from './types';
 import Navigation from './components/Navigation';
@@ -24,7 +25,6 @@ const App: React.FC = () => {
   const [versionHash, setVersionHash] = useState<string>('INIT-HASH');
   const [manualApiKey, setManualApiKey] = useState<string>(() => localStorage.getItem(API_KEY_OVERRIDE) || '');
 
-  // Track the last stringified state to prevent unnecessary hash updates
   const lastStateString = useRef<string>('');
 
   // Load persistence
@@ -35,10 +35,6 @@ const App: React.FC = () => {
         const parsed = JSON.parse(saved);
         if (parsed.notebooks) setNotebooks(parsed.notebooks);
         if (parsed.notes) setNotes(parsed.notes);
-        
-        const dataString = JSON.stringify({ notebooks: parsed.notebooks, notes: parsed.notes });
-        lastStateString.current = dataString;
-        generateSHA256(dataString).then(h => setVersionHash(h.substring(0, 8).toUpperCase()));
       } catch (e) {
         console.error("Failed to restore state", e);
       }
@@ -46,7 +42,7 @@ const App: React.FC = () => {
     setIsInitialized(true);
   }, []);
 
-  // Save persistence & Update Version Hash based on CONTENT changes only
+  // Deterministic Hashing: Sort data by ID to ensure the hash is identical for identical content
   useEffect(() => {
     if (isInitialized) {
       const dataToSave = { notebooks, notes };
@@ -55,12 +51,18 @@ const App: React.FC = () => {
       if (dataString !== lastStateString.current) {
         localStorage.setItem(STORAGE_KEY, dataString);
         lastStateString.current = dataString;
-        generateSHA256(dataString).then(h => setVersionHash(h.substring(0, 8).toUpperCase()));
+
+        // Generate deterministic hash
+        const hashPayload = JSON.stringify({
+          notebooks: [...notebooks].sort((a, b) => a.id.localeCompare(b.id)),
+          notes: [...notes].sort((a, b) => a.id.localeCompare(b.id))
+        });
+        
+        generateSHA256(hashPayload).then(h => setVersionHash(h.substring(0, 8).toUpperCase()));
       }
     }
   }, [notebooks, notes, isInitialized]);
 
-  // Sync manual API key
   useEffect(() => {
     if (manualApiKey) {
       localStorage.setItem(API_KEY_OVERRIDE, manualApiKey);
@@ -121,14 +123,10 @@ const App: React.FC = () => {
   };
 
   const handleRequestKey = async () => {
-    // Attempt standard dialog first
     // @ts-ignore
     if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
       // @ts-ignore
       await window.aistudio.openSelectKey();
-    } else {
-      // In web environments without AI Studio, we rely on the manual input provided in the components
-      console.log("System key selector unavailable. Use manual entry in the Intelligence Hub.");
     }
   };
 
@@ -209,10 +207,10 @@ const App: React.FC = () => {
       <footer className="w-full py-4 px-6 border-t border-slate-200 bg-white flex flex-col md:flex-row justify-between items-center gap-2">
         <div className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-widest flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-slate-200"></span>
-          Ledger Version Integrity System
+          Ledger State Integrity Fingerprint
         </div>
         <div className="flex flex-col items-center md:items-end">
-          <span className="text-[9px] font-mono text-slate-300 uppercase tracking-tighter">SIG_V8</span>
+          <span className="text-[9px] font-mono text-slate-300 uppercase tracking-tighter">BUILD_V1_STABLE</span>
           <span className="text-[10px] font-mono text-blue-600 font-black tracking-widest text-center md:text-right selection:bg-blue-100">
             {versionHash}
           </span>
