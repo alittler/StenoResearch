@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ProjectNote, AppView, Notebook } from './types';
 import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
@@ -10,19 +9,23 @@ import NotebookShelf from './components/NotebookShelf';
 import { generateSHA256 } from './utils/crypto';
 
 const STORAGE_KEY = 'steno_ledger_integrated_v1';
+const API_KEY_OVERRIDE = 'steno_api_key_override';
 
 const INITIAL_NOTEBOOKS: Notebook[] = [
-  { id: 'general', title: 'Primary Project Ledger', color: '#64748b', createdAt: Date.now(), coreConcept: 'The central vision for the project...' }
+  { id: 'general', title: 'Primary Project Ledger', color: '#64748b', createdAt: 1700000000000, coreConcept: 'The central vision for the project...' }
 ];
 
 const App: React.FC = () => {
   const [notebooks, setNotebooks] = useState<Notebook[]>(INITIAL_NOTEBOOKS);
   const [notes, setNotes] = useState<ProjectNote[]>([]);
-  // Change default view to 'ledger' and select the general notebook to make it the "front page"
   const [activeNotebookId, setActiveNotebookId] = useState<string | null>('general');
   const [currentView, setCurrentView] = useState<AppView>('ledger');
   const [isInitialized, setIsInitialized] = useState(false);
   const [versionHash, setVersionHash] = useState<string>('INIT-HASH');
+  const [manualApiKey, setManualApiKey] = useState<string>(() => localStorage.getItem(API_KEY_OVERRIDE) || '');
+
+  // Track the last stringified state to prevent unnecessary hash updates
+  const lastStateString = useRef<string>('');
 
   // Load persistence
   useEffect(() => {
@@ -30,11 +33,12 @@ const App: React.FC = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setNotebooks(parsed.notebooks || INITIAL_NOTEBOOKS);
-        setNotes(parsed.notes || []);
-        if (parsed.lastSaved) {
-           generateSHA256(parsed.lastSaved).then(h => setVersionHash(h.substring(0, 8).toUpperCase()));
-        }
+        if (parsed.notebooks) setNotebooks(parsed.notebooks);
+        if (parsed.notes) setNotes(parsed.notes);
+        
+        const dataString = JSON.stringify({ notebooks: parsed.notebooks, notes: parsed.notes });
+        lastStateString.current = dataString;
+        generateSHA256(dataString).then(h => setVersionHash(h.substring(0, 8).toUpperCase()));
       } catch (e) {
         console.error("Failed to restore state", e);
       }
@@ -42,15 +46,28 @@ const App: React.FC = () => {
     setIsInitialized(true);
   }, []);
 
-  // Save persistence & Update Version Hash
+  // Save persistence & Update Version Hash based on CONTENT changes only
   useEffect(() => {
     if (isInitialized) {
-      const now = new Date().toISOString();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ notebooks, notes, lastSaved: now }));
-      // Shortened SHA to 8 characters for a cleaner look
-      generateSHA256(now).then(h => setVersionHash(h.substring(0, 8).toUpperCase()));
+      const dataToSave = { notebooks, notes };
+      const dataString = JSON.stringify(dataToSave);
+      
+      if (dataString !== lastStateString.current) {
+        localStorage.setItem(STORAGE_KEY, dataString);
+        lastStateString.current = dataString;
+        generateSHA256(dataString).then(h => setVersionHash(h.substring(0, 8).toUpperCase()));
+      }
     }
   }, [notebooks, notes, isInitialized]);
+
+  // Sync manual API key
+  useEffect(() => {
+    if (manualApiKey) {
+      localStorage.setItem(API_KEY_OVERRIDE, manualApiKey);
+    } else {
+      localStorage.removeItem(API_KEY_OVERRIDE);
+    }
+  }, [manualApiKey]);
 
   const activeNotebook = useMemo(() => 
     notebooks.find(nb => nb.id === activeNotebookId), 
@@ -104,15 +121,14 @@ const App: React.FC = () => {
   };
 
   const handleRequestKey = async () => {
-    // Attempting to trigger the platform's key selection dialog if available.
-    // Per security guidelines, manual text input fields for API keys are not provided.
+    // Attempt standard dialog first
     // @ts-ignore
     if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
       // @ts-ignore
       await window.aistudio.openSelectKey();
     } else {
-      console.warn("AI Studio Key selection not available in this environment.");
-      alert("API Configuration: Please ensure your API_KEY environment variable is set in your project settings. Manual entry is disabled for security.");
+      // In web environments without AI Studio, we rely on the manual input provided in the components
+      console.log("System key selector unavailable. Use manual entry in the Intelligence Hub.");
     }
   };
 
@@ -170,6 +186,8 @@ const App: React.FC = () => {
               onPin={(note) => addNote(`📌 PINNED RESEARCH:\n${note.content}`, 'ledger')}
               onDelete={deleteNote}
               onRequestKey={handleRequestKey}
+              manualApiKey={manualApiKey}
+              onSaveManualKey={setManualApiKey}
             />
           )}
 

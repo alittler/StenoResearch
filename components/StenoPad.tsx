@@ -51,11 +51,6 @@ const StenoPad: React.FC<StenoPadProps> = ({ notes, onAddNote, onDeleteNote }) =
         <div className="flex-1 relative p-10 md:p-16">
           <div className="absolute left-16 md:left-24 top-0 bottom-0 w-[1.5px] bg-red-200 pointer-events-none"></div>
           
-          {/* Aesthetic Watermark */}
-          <div className="absolute bottom-8 right-8 select-none pointer-events-none opacity-[0.03] rotate-[-4deg]">
-             <span className="font-serif italic text-4xl md:text-6xl text-stone-900 lowercase font-bold">i fucking hate you</span>
-          </div>
-
           <div className="pl-12 md:pl-20 space-y-12">
             <div className="space-y-4">
               <textarea
@@ -66,13 +61,15 @@ const StenoPad: React.FC<StenoPadProps> = ({ notes, onAddNote, onDeleteNote }) =
                 placeholder="Write a project entry..."
                 className="w-full bg-transparent border-none text-2xl md:text-3xl font-serif italic text-stone-800 focus:ring-0 outline-none resize-none overflow-hidden placeholder:text-stone-200"
               />
-              <button 
-                onClick={handleAdd}
-                disabled={!inputValue.trim()}
-                className="px-6 py-2 bg-stone-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all disabled:opacity-20 shadow-md"
-              >
-                Log Entry
-              </button>
+              <div className="flex justify-between items-center">
+                <button 
+                  onClick={handleAdd}
+                  disabled={!inputValue.trim()}
+                  className="px-6 py-2 bg-stone-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all disabled:opacity-20 shadow-md"
+                >
+                  Log Entry
+                </button>
+              </div>
             </div>
 
             <div className="space-y-16 pb-20">
@@ -98,7 +95,6 @@ const StenoPad: React.FC<StenoPadProps> = ({ notes, onAddNote, onDeleteNote }) =
               {notes.length === 0 && (
                 <div className="mt-20 flex flex-col gap-4">
                   <p className="text-stone-200 font-serif italic text-3xl">The ledger is awaiting your first entry.</p>
-                  <p className="text-stone-100 font-serif italic text-xl opacity-30 select-none">i fucking hate you</p>
                 </div>
               )}
             </div>

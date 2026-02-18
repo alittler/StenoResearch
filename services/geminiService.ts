@@ -5,8 +5,11 @@ import { GoogleGenAI, Type } from "@google/genai";
  * Performs research using Google Search grounding.
  * Uses gemini-3-flash-preview for best efficiency and TPM.
  */
-export async function askResearchQuestion(question: string, context: string) {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+export async function askResearchQuestion(question: string, context: string, overrideKey?: string) {
+  const apiKey = overrideKey || process.env.API_KEY;
+  if (!apiKey) throw new Error("API_KEY_MISSING");
+
+  const ai = new GoogleGenAI({ apiKey });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -34,8 +37,11 @@ export async function askResearchQuestion(question: string, context: string) {
 /**
  * Synthesizes notes and research into a cohesive project outline.
  */
-export async function weaveProjectOutline(notes: { content: string, timestamp: number }[], research: string[]) {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+export async function weaveProjectOutline(notes: { content: string, timestamp: number }[], research: string[], overrideKey?: string) {
+  const apiKey = overrideKey || process.env.API_KEY;
+  if (!apiKey) throw new Error("API_KEY_MISSING");
+
+  const ai = new GoogleGenAI({ apiKey });
   try {
     const sortedNotes = [...notes].sort((a, b) => b.timestamp - a.timestamp);
     const notesCtx = sortedNotes.map(n => `- ${n.content}`).join('\n');
@@ -59,8 +65,11 @@ export async function weaveProjectOutline(notes: { content: string, timestamp: n
 /**
  * Generates a concept visualization image based on a prompt.
  */
-export async function generateProjectImage(prompt: string) {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+export async function generateProjectImage(prompt: string, overrideKey?: string) {
+  const apiKey = overrideKey || process.env.API_KEY;
+  if (!apiKey) throw new Error("API_KEY_MISSING");
+
+  const ai = new GoogleGenAI({ apiKey });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
@@ -87,8 +96,11 @@ export async function generateProjectImage(prompt: string) {
 /**
  * Processes a wall of text into structured, atomic notes.
  */
-export async function shredWallOfText(text: string) {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+export async function shredWallOfText(text: string, overrideKey?: string) {
+  const apiKey = overrideKey || process.env.API_KEY;
+  if (!apiKey) throw new Error("API_KEY_MISSING");
+
+  const ai = new GoogleGenAI({ apiKey });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',

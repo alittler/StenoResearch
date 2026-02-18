@@ -11,12 +11,24 @@ interface ResearchHubProps {
   onPin: (note: ProjectNote) => void;
   onDelete: (id: string) => void;
   onRequestKey: () => void;
+  manualApiKey: string;
+  onSaveManualKey: (key: string) => void;
 }
 
-const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch, onPin, onDelete, onRequestKey }) => {
+const ResearchHub: React.FC<ResearchHubProps> = ({ 
+  notes, 
+  context, 
+  onAddResearch, 
+  onPin, 
+  onDelete, 
+  onRequestKey,
+  manualApiKey,
+  onSaveManualKey
+}) => {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tempKey, setTempKey] = useState(manualApiKey);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,14 +38,23 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
     setError(null);
 
     try {
-      const result = await askResearchQuestion(query, context);
+      const result = await askResearchQuestion(query, context, manualApiKey);
       onAddResearch(query, result.text, result.urls);
       setQuery('');
     } catch (err: any) {
-      setError("AI Service connection failed. Verify your API_KEY is set in project settings or environment.");
+      if (err.message === "API_KEY_MISSING") {
+        setError("API Key is missing. Please provide one below.");
+      } else {
+        setError("AI Service connection failed. Verify your credentials.");
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleUpdateKey = () => {
+    onSaveManualKey(tempKey);
+    setError(null);
   };
 
   return (
@@ -61,20 +82,40 @@ const ResearchHub: React.FC<ResearchHubProps> = ({ notes, context, onAddResearch
         </form>
         
         {error && (
-          <div className="mt-6 p-4 bg-red-950/30 border border-red-900/50 rounded-xl flex flex-col items-center gap-3 animate-pulse">
-            <p className="text-red-400 text-center text-[10px] font-bold uppercase tracking-wider">
-              {error}
-            </p>
-            <button 
-              onClick={(e) => {
-                e.preventDefault();
-                onRequestKey();
-              }}
-              className="px-6 py-2 bg-red-500/10 text-[10px] font-black font-mono text-red-400 hover:bg-red-500 hover:text-white uppercase tracking-[0.2em] border border-red-500/30 rounded-lg transition-all active:scale-95"
-            >
-              Reconfigure System Credentials
-            </button>
-            <p className="text-[8px] text-stone-500 uppercase tracking-widest font-bold">Manual input is handled by environment variables.</p>
+          <div className="mt-6 p-6 bg-red-950/30 border border-red-900/50 rounded-xl space-y-4">
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-red-400 text-center text-[10px] font-bold uppercase tracking-wider">
+                {error}
+              </p>
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  onRequestKey();
+                }}
+                className="text-[10px] font-black font-mono text-blue-400 hover:text-blue-300 uppercase tracking-[0.2em] underline decoration-blue-900 underline-offset-4 transition-colors mb-2"
+              >
+                Try System Selector
+              </button>
+            </div>
+
+            <div className="pt-4 border-t border-red-900/30">
+              <p className="text-[9px] font-black text-stone-500 uppercase tracking-widest mb-2 text-center">Manual API Key Entry</p>
+              <div className="flex gap-2">
+                <input 
+                  type="password"
+                  value={tempKey}
+                  onChange={(e) => setTempKey(e.target.value)}
+                  placeholder="Paste Key Here..."
+                  className="flex-1 bg-stone-950 border border-stone-800 rounded-lg px-4 py-2 text-white font-mono text-xs focus:border-blue-500 outline-none"
+                />
+                <button 
+                  onClick={handleUpdateKey}
+                  className="px-4 py-2 bg-stone-100 text-stone-900 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all active:scale-95"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
