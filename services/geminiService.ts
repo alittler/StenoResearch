@@ -35,9 +35,9 @@ export async function askResearchQuestion(question: string, context: string, api
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Context: ${context}\n\nQuestion: ${question}`,
+      contents: `Project Context: ${context}\n\nResearch Inquiry: ${question}`,
       config: {
-        systemInstruction: "You are an expert researcher. Use Google Search to find current data. Be concise.",
+        systemInstruction: "You are an expert researcher. Use Google Search to find current data. Be concise and factual.",
         tools: [{ googleSearch: {} }],
       },
     });
@@ -56,41 +56,94 @@ export async function askResearchQuestion(question: string, context: string, api
 }
 
 /**
- * SYNTHESIS: Uses Gemini 3 Pro for complex reasoning.
+ * OUTLINE SYNTHESIS: Uses Gemini 3 Pro for complex reasoning and synthesis of multiple notes.
  */
-export async function weaveProjectOutline(notes: {content: string, timestamp: number}[], research: string[], apiKeyOverride?: string): Promise<{ text: string }> {
+export async function weaveProjectOutline(
+  notepadNotes: { content: string; timestamp: number }[],
+  researchNotes: string[],
+  apiKeyOverride?: string
+): Promise<{ text: string }> {
   const apiKey = apiKeyOverride || process.env.API_KEY;
   if (!apiKey) throw new Error("MISSING_API_KEY");
-  
-  const ai = new GoogleGenAI({ apiKey });
-  const text = notes.map(n => n.content).join('\n---\n');
 
+  const ai = new GoogleGenAI({ apiKey });
+  
+  // Format the inputs for the model to understand chronological order and research context.
+  const prompt = `
+    Synthesize the following project notes and research findings into a cohesive project outline.
+    Prioritize newer notes based on timestamps if there are conflicts.
+    
+    Notepad Entries:
+    ${notepadNotes.map(n => `[${new Date(n.timestamp).toISOString()}] ${n.content}`).join('\n')}
+    
+    Research Context:
+    ${researchNotes.join('\n')}
+  `;
+  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: `Synthesize this: ${text}\n\nResearch: ${research.join('\n')}`,
+      contents: prompt,
       config: {
-        systemInstruction: "Create a professional project brief using Markdown.",
-      }
+        systemInstruction: "You are a master strategist. Create a logical, structured project outline in Markdown format based on provided data. Ensure the output is concise but comprehensive.",
+      },
     });
-    return { text: response.text || "Synthesis failed." };
+    
+    return { text: response.text || "" };
   } catch (error: any) {
     handleApiError(error);
   }
 }
 
 /**
- * SHREDDING: Uses Gemini 3 Flash for fast JSON structuring.
+ * IMAGE GENERATION: Uses Gemini 2.5 Flash Image to visualize project concepts.
+ */
+export async function generateProjectImage(prompt: string, apiKeyOverride?: string): Promise<string> {
+  const apiKey = apiKeyOverride || process.env.API_KEY;
+  if (!apiKey) throw new Error("MISSING_API_KEY");
+
+  const ai = new GoogleGenAI({ apiKey });
+  
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: { parts: [{ text: prompt }] },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
+        }
+      }
+    });
+
+    // Iterate through parts to find the image part
+    const candidates = response.candidates;
+    if (candidates && candidates.length > 0) {
+      for (const part of candidates[0].content.parts) {
+        if (part.inlineData) {
+          const base64Data = part.inlineData.data;
+          return `data:${part.inlineData.mimeType};base64,${base64Data}`;
+        }
+      }
+    }
+    throw new Error("No image was returned by the model.");
+  } catch (error: any) {
+    handleApiError(error);
+  }
+}
+
+/**
+ * KNOWLEDGE ARCHITECT: Shreds long unstructured text into atomic JSON-structured notes.
  */
 export async function shredWallOfText(text: string, apiKeyOverride?: string): Promise<any[]> {
   const apiKey = apiKeyOverride || process.env.API_KEY;
   if (!apiKey) throw new Error("MISSING_API_KEY");
 
   const ai = new GoogleGenAI({ apiKey });
+  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Structure this into JSON notes: ${text}`,
+      contents: `Analyze and shred the following text into atomic, actionable notes:\n\n${text}`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -98,38 +151,22 @@ export async function shredWallOfText(text: string, apiKeyOverride?: string): Pr
           items: {
             type: Type.OBJECT,
             properties: {
-              title: { type: Type.STRING },
-              content: { type: Type.STRING },
-              category: { type: Type.STRING }
+              title: { type: Type.STRING, description: "A short, descriptive title for the note." },
+              content: { type: Type.STRING, description: "The core content or insight." },
+              category: { type: Type.STRING, description: "A high-level category like 'Idea', 'Research', 'Task', or 'Reference'." },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+              links: { type: Type.ARRAY, items: { type: Type.STRING } },
+              is_priority: { type: Type.BOOLEAN },
+              raw_source_id: { type: Type.STRING }
             },
-            required: ['title', 'content', 'category']
+            required: ["title", "content", "category"]
           }
         }
       }
     });
-    return JSON.parse(response.text || "[]");
-  } catch (error: any) {
-    handleApiError(error);
-  }
-}
-
-/**
- * IMAGE GENERATION: Uses Gemini 3 Pro Image for high quality.
- */
-export async function generateProjectImage(prompt: string, apiKeyOverride?: string): Promise<string> {
-  const apiKey = apiKeyOverride || process.env.API_KEY;
-  if (!apiKey) throw new Error("MISSING_API_KEY");
-  const ai = new GoogleGenAI({ apiKey });
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
-      contents: { parts: [{ text: prompt }] },
-      config: { imageConfig: { aspectRatio: "1:1", imageSize: "1K" } }
-    });
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
-    }
-    throw new Error("No image generated.");
+    
+    const resultText = response.text || "[]";
+    return JSON.parse(resultText.trim());
   } catch (error: any) {
     handleApiError(error);
   }

@@ -44,7 +44,7 @@ const Navigation: React.FC<NavigationProps> = ({
         borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' 
       }}
     >
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button 
             onClick={onBackToShelf} 
@@ -52,26 +52,26 @@ const Navigation: React.FC<NavigationProps> = ({
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
           </button>
-          <span className={`font-black font-mono text-[10px] uppercase tracking-widest hidden md:inline ${contrastColor}`}>
+          <span className={`font-black font-mono text-[10px] uppercase tracking-widest hidden lg:inline ${contrastColor}`}>
             LEDGER « {activeNotebookTitle}
           </span>
         </div>
 
-        <div className="flex gap-1">
+        <div className="flex gap-1 overflow-x-auto no-scrollbar max-w-[70%] sm:max-w-none">
           {tabs.map((tab) => (
             <button 
               key={tab.id} 
               onClick={() => onViewChange(tab.id)} 
               className={`
-                px-4 py-2 rounded-xl flex items-center gap-2 text-[10px] font-black font-mono uppercase transition-all
+                px-3 py-2 rounded-xl flex items-center gap-2 text-[9px] font-black font-mono uppercase transition-all shrink-0
                 ${activeView === tab.id 
                   ? (isDark ? 'bg-white text-slate-900 shadow-lg' : 'bg-slate-900 text-white shadow-lg')
                   : `${isDark ? 'text-white/60 hover:text-white hover:bg-white/10' : 'text-slate-600 hover:text-slate-900 hover:bg-black/5'}`
                 }
               `}
             >
-              <span className="text-base">{tab.icon}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="text-sm">{tab.icon}</span>
+              <span className="hidden xl:inline">{tab.label}</span>
             </button>
           ))}
         </div>
