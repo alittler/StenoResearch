@@ -1,5 +1,5 @@
 
-export type NoteType = 'ledger' | 'research' | 'outline' | 'raw';
+export type NoteType = 'ledger' | 'research' | 'outline' | 'raw' | 'visualizer';
 
 export interface ProjectNote {
   id: string;
@@ -34,4 +34,4 @@ export interface Notebook {
   };
 }
 
-export type AppView = 'ledger' | 'research' | 'raw' | 'shelf' | 'blueprint' | 'visualizer' | 'architect';
+export type AppView = 'ledger' | 'research' | 'raw' | 'shelf' | 'blueprint' | 'visualizer' | 'architect' | 'brief';

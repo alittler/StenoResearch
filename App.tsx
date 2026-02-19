@@ -1,4 +1,6 @@
 
+'use client';
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ProjectNote, AppView, Notebook } from './types';
 import Navigation from './components/Navigation';
@@ -6,15 +8,19 @@ import StenoPad from './components/StenoPad';
 import ResearchHub from './components/ResearchHub';
 import RawTextEditor from './components/RawTextEditor';
 import NotebookShelf from './components/NotebookShelf';
+import Outlines from './components/Outlines';
+import Visualizer from './components/Visualizer';
+import KnowledgeArchitect from './components/KnowledgeArchitect';
+import ProjectBlueprint from './components/ProjectBlueprint';
 import { generateSHA256 } from './utils/crypto';
 
 const STORAGE_KEY = 'steno_ledger_core_v1';
 
 const INITIAL_NOTEBOOKS: Notebook[] = [
-  { id: 'general', title: 'Primary Project Ledger', color: '#64748b', createdAt: Date.now() }
+  { id: 'general', title: 'Primary Project Ledger', color: '#64748b', createdAt: Date.now(), coreConcept: 'Your project start here...' }
 ];
 
-const App: React.FC = () => {
+export default function App() {
   const [notebooks, setNotebooks] = useState<Notebook[]>(INITIAL_NOTEBOOKS);
   const [notes, setNotes] = useState<ProjectNote[]>([]);
   const [activeNotebookId, setActiveNotebookId] = useState<string | null>('general');
@@ -23,6 +29,7 @@ const App: React.FC = () => {
   const [versionHash, setVersionHash] = useState<string>('INIT_SYNC');
 
   const lastStateString = useRef<string>('');
+  const isGatewayActive = !!process.env.AI_GATEWAY_URL;
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -72,6 +79,14 @@ const App: React.FC = () => {
     setNotes(prev => [newNote, ...prev]);
   };
 
+  const updateNote = (id: string, updates: Partial<ProjectNote>) => {
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, ...updates } : n));
+  };
+
+  const updateNotebook = (id: string, updates: Partial<Notebook>) => {
+    setNotebooks(prev => prev.map(nb => nb.id === id ? { ...nb, ...updates } : nb));
+  };
+
   const deleteNote = (id: string) => {
     setNotes(prev => prev.filter(n => n.id !== id));
   };
@@ -79,7 +94,7 @@ const App: React.FC = () => {
   if (!isInitialized) return null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8fafc]">
+    <div className="min-h-screen flex flex-col bg-[#f8fafc] text-[#1e293b]">
       {currentView !== 'shelf' && (
         <Navigation 
           activeView={currentView}
@@ -95,7 +110,7 @@ const App: React.FC = () => {
             notebooks={notebooks}
             notes={notes}
             onSelect={(id) => { setActiveNotebookId(id); setCurrentView('ledger'); }}
-            onAdd={(t, c) => setNotebooks([...notebooks, { id: crypto.randomUUID(), title: t, color: c, createdAt: Date.now() }])}
+            onAdd={(t, c) => setNotebooks([...notebooks, { id: crypto.randomUUID(), title: t, color: c, createdAt: Date.now(), coreConcept: '' }])}
             onDelete={(id) => setNotebooks(notebooks.filter(n => n.id !== id))}
             hasUnsavedChanges={false}
             onBackupPerformed={() => {}}
@@ -115,28 +130,67 @@ const App: React.FC = () => {
             onPin={(note) => addNote(note.content, 'ledger')}
             onDelete={deleteNote}
           />
-        ) : (
+        ) : currentView === 'brief' ? (
+          <div className="max-w-6xl mx-auto p-6">
+            <Outlines 
+              notepadNotes={activeNotes.filter(n => n.type === 'ledger')}
+              researchNotes={activeNotes.filter(n => n.type === 'research')}
+              existingOutlines={activeNotes.filter(n => n.type === 'outline')}
+              onSaveOutline={(content) => addNote(content, 'outline')}
+              onDeleteOutline={deleteNote}
+            />
+          </div>
+        ) : currentView === 'blueprint' && activeNotebook ? (
+          <ProjectBlueprint 
+            notebook={activeNotebook}
+            ledgerNotes={activeNotes.filter(n => n.type === 'ledger')}
+            onUpdateNotebook={(updates) => updateNotebook(activeNotebook.id, updates)}
+            onUpdateNote={updateNote}
+            onAddNote={(content, metadata) => addNote(content, 'ledger', { metadata })}
+          />
+        ) : currentView === 'architect' ? (
+          <KnowledgeArchitect 
+            onShredded={(staged) => {
+              const committed = staged.map(s => ({ ...s, notebookId: activeNotebookId! }));
+              setNotes(prev => [...committed, ...prev]);
+            }}
+            onAddRawNote={(content) => addNote(content, 'raw')}
+          />
+        ) : currentView === 'visualizer' ? (
+          <Visualizer 
+            notes={activeNotes.filter(n => n.type === 'visualizer' || (n.metadata && n.metadata.imageData))}
+            notepadContext={activeNotes.slice(0, 5).map(n => n.content).join(' ')}
+            onAddImage={(p, img) => addNote(p, 'visualizer', { metadata: { imageData: img } })}
+            onDeleteImage={deleteNote}
+          />
+        ) : currentView === 'raw' ? (
           <RawTextEditor 
             allNotes={activeNotes}
             notebookTitle={activeNotebook?.title || 'Ledger'}
           />
-        )}
+        ) : null}
       </main>
 
       <footer className="py-2.5 px-6 border-t border-slate-200 bg-white flex justify-between items-center shadow-[0_-1px_5px_rgba(0,0,0,0.02)]">
-        <div className="flex items-center gap-3">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-          <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
-            <span className="text-slate-400 font-bold">Project Hash:</span> 
-            <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-800 font-bold border border-slate-200/50">{versionHash}</span>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+            <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
+              <span className="text-slate-400 font-bold">State ID:</span> 
+              <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-800 font-bold border border-slate-200/50">{versionHash}</span>
+            </div>
           </div>
+          {isGatewayActive && (
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+              <span className="text-[9px] font-mono text-blue-600 uppercase font-black tracking-widest">Gateway Ready</span>
+            </div>
+          )}
         </div>
         <div className="text-[9px] font-mono text-slate-300 uppercase tracking-tighter">
-          Steno Ledger Core v1.4 • {new Date().getFullYear()}
+          Steno Ledger Core v1.5 • Vercel AI Gateway Ready
         </div>
       </footer>
     </div>
   );
-};
-
-export default App;
+}

@@ -1,3 +1,4 @@
+'use client';
 
 import React, { useState, useRef, useMemo } from 'react';
 import { Notebook, ProjectNote } from '../types';
@@ -28,7 +29,6 @@ const NotebookShelf: React.FC<NotebookShelfProps> = ({
   onSelect, 
   onAdd, 
   onDelete, 
-  onBackupPerformed,
   onRestore
 }) => {
   const [isAdding, setIsAdding] = useState(false);
@@ -68,7 +68,6 @@ const NotebookShelf: React.FC<NotebookShelfProps> = ({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    onBackupPerformed();
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {

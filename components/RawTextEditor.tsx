@@ -1,3 +1,4 @@
+'use client';
 
 import React, { useMemo, useState } from 'react';
 import { ProjectNote } from '../types';
@@ -11,7 +12,6 @@ const RawTextEditor: React.FC<RawTextEditorProps> = ({ allNotes, notebookTitle }
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
   const aggregatedData = useMemo(() => {
-    // Sort all records chronologically
     const sorted = [...allNotes].sort((a, b) => a.timestamp - b.timestamp);
     
     let text = `==================================================\n`;
@@ -27,9 +27,6 @@ const RawTextEditor: React.FC<RawTextEditorProps> = ({ allNotes, notebookTitle }
       text += `[#${index + 1}] [${dateStr}] [TYPE: ${typeLabel}]\n`;
       if (note.type === 'research' && note.question) {
         text += `QUESTION: ${note.question}\n`;
-      }
-      if (note.tags && note.tags.length > 0) {
-        text += `TAGS: ${note.tags.join(', ')}\n`;
       }
       text += `--------------------------------------------------\n`;
       text += `${note.content}\n`;
@@ -91,7 +88,7 @@ const RawTextEditor: React.FC<RawTextEditorProps> = ({ allNotes, notebookTitle }
         
         <div className="p-4 bg-stone-100 border-t border-stone-200 flex justify-between items-center">
           <p className="text-[10px] font-mono text-stone-400 italic">
-            This read-only view consolidates all Notepad, Research, and Outline data.
+            This consolidated view supports notepad and research data archival.
           </p>
           <div className="flex gap-2">
             <button
@@ -112,7 +109,7 @@ const RawTextEditor: React.FC<RawTextEditorProps> = ({ allNotes, notebookTitle }
       </div>
       
       <p className="mt-4 text-xs text-stone-400 italic text-center">
-        💡 Use this view to export your research for external word processors or long-form archival.
+        💡 Use this view to export your research for external word processors.
       </p>
     </div>
   );
