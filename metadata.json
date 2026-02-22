@@ -1,8 +1,5 @@
 {
   "name": "Project Ledger",
   "description": "Nostalgic, high-precision project research and management ledger.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone"
-  ]
+  "requestFramePermissions": []
 }

@@ -12,10 +12,9 @@ const getAI = () => {
   }
 
   // Initialize with API key from environment
+  // Always use const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
   return new GoogleGenAI({ 
-    apiKey: process.env.API_KEY,
-    // Support Vercel AI Gateway if configured
-    baseUrl: process.env.AI_GATEWAY_URL || undefined 
+    apiKey: process.env.API_KEY
   });
 };
 

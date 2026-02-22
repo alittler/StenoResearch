@@ -8,16 +8,13 @@ import StenoPad from './components/StenoPad';
 import ResearchHub from './components/ResearchHub';
 import RawTextEditor from './components/RawTextEditor';
 import NotebookShelf from './components/NotebookShelf';
-import Outlines from './components/Outlines';
-import Visualizer from './components/Visualizer';
 import KnowledgeArchitect from './components/KnowledgeArchitect';
-import ProjectBlueprint from './components/ProjectBlueprint';
 import { generateSHA256 } from './utils/crypto';
 
-const STORAGE_KEY = 'steno_ledger_core_v1';
+const STORAGE_KEY = 'steno_ledger_core_v2';
 
 const INITIAL_NOTEBOOKS: Notebook[] = [
-  { id: 'general', title: 'Primary Project Ledger', color: '#64748b', createdAt: Date.now(), coreConcept: 'Your project start here...' }
+  { id: 'general', title: 'Notebook', color: '#64748b', createdAt: Date.now(), coreConcept: '' }
 ];
 
 export default function App() {
@@ -26,17 +23,24 @@ export default function App() {
   const [activeNotebookId, setActiveNotebookId] = useState<string | null>('general');
   const [currentView, setCurrentView] = useState<AppView>('ledger');
   const [isInitialized, setIsInitialized] = useState(false);
-  const [versionHash, setVersionHash] = useState<string>('INIT_SYNC');
+  const [versionHash, setVersionHash] = useState<string>('INIT');
 
   const lastStateString = useRef<string>('');
-  const isGatewayActive = !!process.env.AI_GATEWAY_URL;
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.notebooks) setNotebooks(parsed.notebooks);
+        if (parsed.notebooks) {
+          // Migration: Rename 'Primary Project Ledger' to 'Notebook'
+          const migratedNotebooks = parsed.notebooks.map((nb: Notebook) => 
+            nb.id === 'general' && nb.title === 'Primary Project Ledger' 
+              ? { ...nb, title: 'Notebook' } 
+              : nb
+          );
+          setNotebooks(migratedNotebooks);
+        }
         if (parsed.notes) setNotes(parsed.notes);
       } catch (e) {
         console.error("Restoration failed", e);
@@ -101,74 +105,52 @@ export default function App() {
           onViewChange={setCurrentView}
           activeNotebookTitle={activeNotebook?.title}
           onBackToShelf={() => setCurrentView('shelf')}
+          hideTabs={activeNotebookId === 'general'}
         />
       )}
 
       <main className="flex-1 w-full overflow-y-auto">
-        {currentView === 'shelf' ? (
-          <NotebookShelf 
-            notebooks={notebooks}
-            notes={notes}
-            onSelect={(id) => { setActiveNotebookId(id); setCurrentView('ledger'); }}
-            onAdd={(t, c) => setNotebooks([...notebooks, { id: crypto.randomUUID(), title: t, color: c, createdAt: Date.now(), coreConcept: '' }])}
-            onDelete={(id) => setNotebooks(notebooks.filter(n => n.id !== id))}
-            hasUnsavedChanges={false}
-            onBackupPerformed={() => {}}
-            onRestore={(d) => { setNotebooks(d.notebooks); setNotes(d.notes); }}
-          />
-        ) : currentView === 'ledger' ? (
-          <StenoPad 
-            notes={activeNotes.filter(n => n.type === 'ledger')}
-            onAddNote={(c) => addNote(c, 'ledger')}
-            onDeleteNote={deleteNote}
-          />
-        ) : currentView === 'research' ? (
-          <ResearchHub 
-            notes={activeNotes.filter(n => n.type === 'research')}
-            context={activeNotes.slice(0, 10).map(n => n.content).join('\n')}
-            onAddResearch={(q, a, u) => addNote(a, 'research', { question: q, metadata: { urls: u } })}
-            onPin={(note) => addNote(note.content, 'ledger')}
-            onDelete={deleteNote}
-          />
-        ) : currentView === 'brief' ? (
-          <div className="max-w-6xl mx-auto p-6">
-            <Outlines 
-              notepadNotes={activeNotes.filter(n => n.type === 'ledger')}
-              researchNotes={activeNotes.filter(n => n.type === 'research')}
-              existingOutlines={activeNotes.filter(n => n.type === 'outline')}
-              onSaveOutline={(content) => addNote(content, 'outline')}
-              onDeleteOutline={deleteNote}
+        <div className={`mx-auto w-full ${currentView === 'shelf' ? '' : 'max-w-[1400px] px-4 lg:px-12 py-8'}`}>
+          {currentView === 'shelf' ? (
+            <NotebookShelf 
+              notebooks={notebooks}
+              notes={notes}
+              onSelect={(id) => { setActiveNotebookId(id); setCurrentView('ledger'); }}
+              onAdd={(t, c) => setNotebooks([...notebooks, { id: crypto.randomUUID(), title: t, color: c, createdAt: Date.now(), coreConcept: '' }])}
+              onDelete={(id) => setNotebooks(notebooks.filter(n => n.id !== id))}
+              hasUnsavedChanges={false}
+              onBackupPerformed={() => {}}
+              onRestore={(d) => { setNotebooks(d.notebooks); setNotes(d.notes); }}
             />
-          </div>
-        ) : currentView === 'blueprint' && activeNotebook ? (
-          <ProjectBlueprint 
-            notebook={activeNotebook}
-            ledgerNotes={activeNotes.filter(n => n.type === 'ledger')}
-            onUpdateNotebook={(updates) => updateNotebook(activeNotebook.id, updates)}
-            onUpdateNote={updateNote}
-            onAddNote={(content, metadata) => addNote(content, 'ledger', { metadata })}
-          />
-        ) : currentView === 'architect' ? (
-          <KnowledgeArchitect 
-            onShredded={(staged) => {
-              const committed = staged.map(s => ({ ...s, notebookId: activeNotebookId! }));
-              setNotes(prev => [...committed, ...prev]);
-            }}
-            onAddRawNote={(content) => addNote(content, 'raw')}
-          />
-        ) : currentView === 'visualizer' ? (
-          <Visualizer 
-            notes={activeNotes.filter(n => n.type === 'visualizer' || (n.metadata && n.metadata.imageData))}
-            notepadContext={activeNotes.slice(0, 5).map(n => n.content).join(' ')}
-            onAddImage={(p, img) => addNote(p, 'visualizer', { metadata: { imageData: img } })}
-            onDeleteImage={deleteNote}
-          />
-        ) : currentView === 'raw' ? (
-          <RawTextEditor 
-            allNotes={activeNotes}
-            notebookTitle={activeNotebook?.title || 'Ledger'}
-          />
-        ) : null}
+          ) : currentView === 'ledger' ? (
+            <StenoPad 
+              notes={activeNotes.filter(n => n.type === 'ledger' || n.type === 'research')}
+              onAddNote={(c, type, extra) => addNote(c, type, extra)}
+              onDeleteNote={deleteNote}
+            />
+          ) : currentView === 'research' ? (
+            <ResearchHub 
+              notes={activeNotes.filter(n => n.type === 'research')}
+              context={activeNotes.slice(0, 10).map(n => n.content).join('\n')}
+              onAddResearch={(q, a, u) => addNote(a, 'research', { question: q, metadata: { urls: u } })}
+              onPin={(note) => addNote(note.content, 'ledger')}
+              onDelete={deleteNote}
+            />
+          ) : currentView === 'architect' ? (
+            <KnowledgeArchitect 
+              onShredded={(staged) => {
+                const committed = staged.map(s => ({ ...s, notebookId: activeNotebookId! }));
+                setNotes(prev => [...committed, ...prev]);
+              }}
+              onAddRawNote={(content) => addNote(content, 'raw')}
+            />
+          ) : currentView === 'raw' ? (
+            <RawTextEditor 
+              allNotes={activeNotes}
+              notebookTitle={activeNotebook?.title || 'Ledger'}
+            />
+          ) : null}
+        </div>
       </main>
 
       <footer className="py-2.5 px-6 border-t border-slate-200 bg-white flex justify-between items-center shadow-[0_-1px_5px_rgba(0,0,0,0.02)]">
@@ -180,15 +162,9 @@ export default function App() {
               <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-800 font-bold border border-slate-200/50">{versionHash}</span>
             </div>
           </div>
-          {isGatewayActive && (
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-              <span className="text-[9px] font-mono text-blue-600 uppercase font-black tracking-widest">Gateway Ready</span>
-            </div>
-          )}
         </div>
         <div className="text-[9px] font-mono text-slate-300 uppercase tracking-tighter">
-          Steno Ledger Core v1.5 • Vercel AI Gateway Ready
+          Steno Ledger Core v1.5
         </div>
       </footer>
     </div>

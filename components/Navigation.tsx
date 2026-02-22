@@ -9,21 +9,20 @@ interface NavigationProps {
   onViewChange: (view: AppView) => void;
   activeNotebookTitle?: string;
   onBackToShelf: () => void;
+  hideTabs?: boolean;
 }
 
 const Navigation: React.FC<NavigationProps> = ({ 
   activeView, 
   onViewChange, 
   activeNotebookTitle, 
-  onBackToShelf 
+  onBackToShelf,
+  hideTabs
 }) => {
   const tabs: { id: AppView; label: string; icon: string }[] = [
     { id: 'ledger', label: 'Pad', icon: '📝' },
     { id: 'research', label: 'Intel', icon: '🔍' },
-    { id: 'brief', label: 'Brief', icon: '🧶' },
-    { id: 'blueprint', label: 'Map', icon: '📐' },
     { id: 'architect', label: 'Build', icon: '🏗️' },
-    { id: 'visualizer', label: 'Vision', icon: '🎨' },
     { id: 'raw', label: 'Export', icon: '📄' },
   ];
 
@@ -47,24 +46,26 @@ const Navigation: React.FC<NavigationProps> = ({
           </span>
         </div>
 
-        <div className="flex gap-1 overflow-x-auto no-scrollbar py-2">
-          {tabs.map((tab) => (
-            <button 
-              key={tab.id} 
-              onClick={() => onViewChange(tab.id)} 
-              className={`
-                px-3 py-1.5 rounded-lg flex items-center gap-2 text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap
-                ${activeView === tab.id 
-                  ? 'bg-slate-900 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'
-                }
-              `}
-            >
-              <span className="text-sm">{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
+        {!hideTabs && (
+          <div className="flex gap-1 overflow-x-auto no-scrollbar py-2">
+            {tabs.map((tab) => (
+              <button 
+                key={tab.id} 
+                onClick={() => onViewChange(tab.id)} 
+                className={`
+                  px-3 py-1.5 rounded-lg flex items-center gap-2 text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap
+                  ${activeView === tab.id 
+                    ? 'bg-slate-900 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'
+                  }
+                `}
+              >
+                <span className="text-sm">{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </nav>
   );
