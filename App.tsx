@@ -127,6 +127,8 @@ export default function App() {
               notes={activeNotes.filter(n => n.type === 'ledger' || n.type === 'research')}
               onAddNote={(c, type, extra) => addNote(c, type, extra)}
               onDeleteNote={deleteNote}
+              isNotebook={activeNotebookId === 'general'}
+              allNotebookTitles={notebooks.map(nb => nb.title)}
             />
           ) : currentView === 'research' ? (
             <ResearchHub 
