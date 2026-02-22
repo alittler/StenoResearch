@@ -46,7 +46,7 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
         err.message?.includes("403") ||
         err.message?.includes("Requested entity was not found")
       ) {
-        setError("AI Credentials Missing or Invalid.");
+        setError("AI Credentials Missing or Invalid (Gemini or Groq).");
         setShowKeyPrompt(true);
       } else {
         setError(`Research failed: ${err.message}`);
