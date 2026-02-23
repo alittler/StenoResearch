@@ -113,7 +113,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
 
   return (
     <div className="relative w-full">
-      <div className="bg-[#fffdf2] border-2 border-stone-200 rounded-t-[2rem] rounded-b-2xl shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] relative min-h-[850px] flex flex-col paper-texture overflow-hidden">
+      <div className="bg-[#fffdf2] border-2 border-stone-200 rounded-t-[2rem] rounded-b-2xl shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] relative min-h-[calc(100vh-180px)] flex flex-col paper-texture overflow-hidden">
         
         {/* Black Book Binding */}
         <div className="h-20 bg-[#1a1a1a] border-b border-black relative z-20 overflow-visible shadow-lg">
@@ -143,99 +143,122 @@ const StenoPad: React.FC<StenoPadProps> = ({
         <div className="relative z-10 -mt-4">
           {/* Layer 1: Deepest remnants */}
           <div className="h-1 bg-transparent flex overflow-hidden opacity-20">
-            {[...Array(70)].map((_, i) => (
-              <div 
-                key={i} 
-                className="flex-1 h-3 bg-stone-500 paper-texture"
-                style={{
-                  clipPath: `polygon(0% 0%, 100% 0%, 100% ${10 + Math.random() * 80}%, 50% ${2 + Math.random() * 60}%, 0% ${10 + Math.random() * 80}%)`,
-                  marginTop: '-6px',
-                  backgroundSize: '20px 20px'
-                }}
-              ></div>
-            ))}
+            {[...Array(75)].map((_, i) => {
+              const waveHeight = Math.sin(i * 0.1) * 30; // More pronounced wave
+              return (
+                <div 
+                  key={i} 
+                  className="flex-1 h-4 bg-stone-500 paper-texture"
+                  style={{
+                    clipPath: `polygon(0% 0%, 100% 0%, 100% ${10 + waveHeight + Math.random() * 60}%, 50% ${waveHeight + Math.random() * 40}%, 0% ${10 + waveHeight + Math.random() * 60}%)`,
+                    marginTop: `-${5 + Math.random() * 3}px`,
+                    backgroundSize: '20px 20px',
+                    transform: `rotate(${Math.random() * 10 - 5}deg)`
+                  }}
+                ></div>
+              );
+            })}
           </div>
           
           {/* Layer 2 */}
           <div className="h-1 bg-transparent flex overflow-hidden -mt-0.5 opacity-30">
-            {[...Array(65)].map((_, i) => (
-              <div 
-                key={i} 
-                className="flex-1 h-3 bg-stone-400 paper-texture"
-                style={{
-                  clipPath: `polygon(0% 0%, 100% 0%, 100% ${20 + Math.random() * 70}%, 50% ${5 + Math.random() * 50}%, 0% ${20 + Math.random() * 70}%)`,
-                  marginTop: '-5px',
-                  backgroundSize: '20px 20px'
-                }}
-              ></div>
-            ))}
+            {[...Array(70)].map((_, i) => {
+              const waveHeight = Math.sin((i + 10) * 0.12) * 25;
+              return (
+                <div 
+                  key={i} 
+                  className="flex-1 h-4 bg-stone-400 paper-texture"
+                  style={{
+                    clipPath: `polygon(0% 0%, 100% 0%, 100% ${20 + waveHeight + Math.random() * 50}%, 50% ${5 + waveHeight + Math.random() * 30}%, 0% ${20 + waveHeight + Math.random() * 50}%)`,
+                    marginTop: `-${4 + Math.random() * 3}px`,
+                    backgroundSize: '20px 20px',
+                    transform: `rotate(${Math.random() * 8 - 4}deg)`
+                  }}
+                ></div>
+              );
+            })}
           </div>
 
           {/* Layer 3 */}
           <div className="h-1.5 bg-transparent flex overflow-hidden -mt-0.5 opacity-40 drop-shadow-[0_1px_1px_rgba(0,0,0,0.05)]">
-            {[...Array(60)].map((_, i) => (
-              <div 
-                key={i} 
-                className="flex-1 h-4 bg-stone-300 paper-texture"
-                style={{
-                  clipPath: `polygon(0% 0%, 100% 0%, 100% ${30 + Math.random() * 60}%, 50% ${10 + Math.random() * 40}%, 0% ${30 + Math.random() * 60}%)`,
-                  marginTop: '-4px',
-                  backgroundSize: '20px 20px'
-                }}
-              ></div>
-            ))}
+            {[...Array(65)].map((_, i) => {
+              const waveHeight = Math.sin((i + 20) * 0.15) * 20;
+              return (
+                <div 
+                  key={i} 
+                  className="flex-1 h-5 bg-stone-300 paper-texture"
+                  style={{
+                    clipPath: `polygon(0% 0%, 100% 0%, 100% ${30 + waveHeight + Math.random() * 40}%, 50% ${10 + waveHeight + Math.random() * 20}%, 0% ${30 + waveHeight + Math.random() * 40}%)`,
+                    marginTop: `-${3 + Math.random() * 3}px`,
+                    backgroundSize: '20px 20px',
+                    transform: `rotate(${Math.random() * 6 - 3}deg)`
+                  }}
+                ></div>
+              );
+            })}
           </div>
 
           {/* Layer 4 */}
           <div className="h-1.5 bg-transparent flex overflow-hidden -mt-0.5 opacity-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-            {[...Array(55)].map((_, i) => (
-              <div 
-                key={i} 
-                className="flex-1 h-4 bg-stone-200 paper-texture"
-                style={{
-                  clipPath: `polygon(0% 0%, 100% 0%, 100% ${45 + Math.random() * 50}%, 50% ${20 + Math.random() * 30}%, 0% ${45 + Math.random() * 50}%)`,
-                  marginTop: '-3px',
-                  backgroundSize: '20px 20px'
-                }}
-              ></div>
-            ))}
+            {[...Array(60)].map((_, i) => {
+              const waveHeight = Math.sin((i + 30) * 0.18) * 15;
+              return (
+                <div 
+                  key={i} 
+                  className="flex-1 h-5 bg-stone-200 paper-texture"
+                  style={{
+                    clipPath: `polygon(0% 0%, 100% 0%, 100% ${45 + waveHeight + Math.random() * 30}%, 50% ${15 + waveHeight + Math.random() * 15}%, 0% ${45 + waveHeight + Math.random() * 30}%)`,
+                    marginTop: `-${2 + Math.random() * 3}px`,
+                    backgroundSize: '20px 20px',
+                    transform: `rotate(${Math.random() * 4 - 2}deg)`
+                  }}
+                ></div>
+              );
+            })}
           </div>
 
           {/* Layer 5: Top remnants with shadow */}
           <div className="h-2 bg-transparent flex overflow-hidden -mt-0.5 drop-shadow-[0_2px_2px_rgba(0,0,0,0.15)]">
-            {[...Array(50)].map((_, i) => (
-              <div 
-                key={i} 
-                className="flex-1 h-5 bg-stone-100 paper-texture"
-                style={{
-                  clipPath: `polygon(0% 0%, 100% 0%, 100% ${60 + Math.random() * 40}%, 50% ${30 + Math.random() * 40}%, 0% ${60 + Math.random() * 40}%)`,
-                  marginTop: '-2px',
-                  backgroundSize: '20px 20px'
-                }}
-              ></div>
-            ))}
+            {[...Array(55)].map((_, i) => {
+              const waveHeight = Math.sin((i + 40) * 0.2) * 10;
+              return (
+                <div 
+                  key={i} 
+                  className="flex-1 h-6 bg-stone-100 paper-texture"
+                  style={{
+                    clipPath: `polygon(0% 0%, 100% 0%, 100% ${60 + waveHeight + Math.random() * 25}%, 50% ${25 + waveHeight + Math.random() * 15}%, 0% ${60 + waveHeight + Math.random() * 25}%)`,
+                    marginTop: `-${1 + Math.random() * 3}px`,
+                    backgroundSize: '20px 20px',
+                    transform: `rotate(${Math.random() * 2 - 1}deg)`
+                  }}
+                ></div>
+              );
+            })}
           </div>
         </div>
 
         {/* Current Active Page Torn Edge with Subtle Shadow */}
         <div className="h-6 bg-transparent relative z-10 overflow-hidden flex -mt-1 drop-shadow-[0_2px_3px_rgba(0,0,0,0.15)]">
-          {[...Array(40)].map((_, i) => (
-            <div 
-              key={i} 
-              className="flex-1 h-full bg-[#fffdf2] border-t border-stone-200/50 paper-texture"
-              style={{
-                clipPath: `polygon(0% 0%, 100% 0%, 100% ${90 + Math.random() * 10}%, 50% ${80 + Math.random() * 20}%, 0% ${90 + Math.random() * 10}%)`,
-                transform: 'translateY(-3px)',
-                backgroundSize: '20px 20px'
-              }}
-            ></div>
-          ))}
+          {[...Array(45)].map((_, i) => {
+            const waveHeight = Math.sin(i * 0.1) * 15;
+            return (
+              <div 
+                key={i} 
+                className="flex-1 h-full bg-[#fffdf2] border-t border-stone-200/50 paper-texture"
+                style={{
+                  clipPath: `polygon(0% 0%, 100% 0%, 100% ${92 + waveHeight + Math.random() * 5}%, 50% ${85 + waveHeight + Math.random() * 8}%, 0% ${92 + waveHeight + Math.random() * 5}%)`,
+                  transform: `translateY(-3px) rotate(${Math.random() * 1 - 0.5}deg)`,
+                  backgroundSize: '20px 20px'
+                }}
+              ></div>
+            );
+          })}
         </div>
 
         {/* Writing Surface */}
         <div className="flex-1 relative p-10 md:p-20 pt-3">
-          {/* Vertical Margin Line (Steno Style) */}
-          <div className="absolute left-16 md:left-24 top-0 bottom-0 w-[2px] bg-red-200/40 pointer-events-none"></div>
+          {/* Vertical Margin Line (Steno Style) - Centered */}
+          <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[2px] bg-red-200/40 pointer-events-none"></div>
           
           <div className="pl-10 md:pl-20 space-y-12">
             
@@ -290,7 +313,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
               
               <div className="flex justify-between items-center mt-4">
                 <div className="text-[10px] font-mono text-stone-400 uppercase tracking-widest">
-                  {isSearching ? 'Synchronizing with core...' : 'Ready for capture'}
+                  {isSearching ? 'Synchronizing with core...' : ''}
                 </div>
                 {error && <span className="text-red-500 text-[10px] font-bold uppercase">{error}</span>}
               </div>

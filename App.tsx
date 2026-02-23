@@ -109,8 +109,8 @@ export default function App() {
         />
       )}
 
-      <main className="flex-1 w-full overflow-y-auto">
-        <div className={`mx-auto w-full ${currentView === 'shelf' ? '' : 'max-w-[1400px] px-4 lg:px-12 py-8'}`}>
+      <main className="flex-1 w-full overflow-y-auto relative">
+        <div className={`mx-auto w-full h-full ${currentView === 'shelf' ? '' : 'max-w-[1400px] px-4 lg:px-12 py-8'}`}>
           {currentView === 'shelf' ? (
             <NotebookShelf 
               notebooks={notebooks}
