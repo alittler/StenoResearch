@@ -62,7 +62,7 @@ const RawTextEditor: React.FC<RawTextEditorProps> = ({ allNotes, notebookTitle }
   };
 
   return (
-    <div className="h-[calc(100vh-12rem)] min-h-[500px] flex flex-col animate-in fade-in duration-500">
+    <div className="flex flex-col animate-in fade-in duration-500 p-10 md:p-20 pt-3 h-full min-h-[600px]">
       <div className="bg-white rounded-2xl shadow-xl border border-stone-200 overflow-hidden flex flex-col h-full">
         <div className="p-4 bg-stone-800 text-white flex justify-between items-center">
           <div className="flex items-center gap-3">

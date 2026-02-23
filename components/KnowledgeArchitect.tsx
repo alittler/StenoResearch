@@ -73,7 +73,7 @@ const KnowledgeArchitect: React.FC<KnowledgeArchitectProps> = ({ onShredded, onA
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12 animate-fade-in pb-32">
+    <div className="space-y-12 animate-fade-in p-10 md:p-20 pt-3 pb-32">
       <header className="space-y-2 text-center">
         <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic">Knowledge Architect</h2>
         <p className="text-slate-400 text-[10px] uppercase font-black tracking-[0.4em]">Notes created here remain staged until committed.</p>

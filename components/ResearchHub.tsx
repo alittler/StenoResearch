@@ -69,7 +69,7 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10 animate-fade-in p-6">
+    <div className="space-y-10 animate-fade-in p-10 md:p-20 pt-3">
       <div className="bg-stone-900 p-8 rounded-[2.5rem] shadow-2xl border-b-8 border-stone-950 paper-texture">
         <h2 className="text-stone-100 font-black text-[10px] uppercase tracking-[0.4em] mb-6 flex items-center gap-3">
           <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>

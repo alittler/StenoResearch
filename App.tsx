@@ -9,6 +9,7 @@ import ResearchHub from './components/ResearchHub';
 import RawTextEditor from './components/RawTextEditor';
 import NotebookShelf from './components/NotebookShelf';
 import KnowledgeArchitect from './components/KnowledgeArchitect';
+import NotepadContainer from './components/NotepadContainer';
 import { generateSHA256 } from './utils/crypto';
 
 const STORAGE_KEY = 'steno_ledger_core_v2';
@@ -99,19 +100,54 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc] text-[#1e293b]">
-      {currentView !== 'shelf' && (
-        <Navigation 
-          activeView={currentView}
-          onViewChange={setCurrentView}
-          activeNotebookTitle={activeNotebook?.title}
-          onBackToShelf={() => setCurrentView('shelf')}
-          hideTabs={activeNotebookId === 'general'}
-        />
-      )}
-
       <main className="flex-1 w-full overflow-y-auto relative">
-        <div className={`mx-auto w-full h-full ${currentView === 'shelf' ? '' : 'max-w-[1400px] px-4 lg:px-12 py-8'}`}>
-          {currentView === 'shelf' ? (
+        <div className={`mx-auto w-full h-full relative ${currentView === 'shelf' ? '' : 'max-w-[1400px] px-4 lg:px-12 py-8 pb-32'}`}>
+          {currentView !== 'shelf' && (
+            <NotepadContainer 
+              title={activeNotebook?.title}
+              navigation={
+                <Navigation 
+                  activeView={currentView}
+                  onViewChange={setCurrentView}
+                  activeNotebookTitle={activeNotebook?.title}
+                  onBackToShelf={() => setCurrentView('shelf')}
+                  hideTabs={activeNotebookId === 'general'}
+                />
+              }
+            >
+              {currentView === 'ledger' ? (
+                <StenoPad 
+                  notes={activeNotes.filter(n => n.type === 'ledger' || n.type === 'research')}
+                  onAddNote={(c, type, extra) => addNote(c, type, extra)}
+                  onDeleteNote={deleteNote}
+                  isNotebook={activeNotebookId === 'general'}
+                  allNotebookTitles={notebooks.map(nb => nb.title)}
+                />
+              ) : currentView === 'research' ? (
+                <ResearchHub 
+                  notes={activeNotes.filter(n => n.type === 'research')}
+                  context={activeNotes.slice(0, 10).map(n => n.content).join('\n')}
+                  onAddResearch={(q, a, u) => addNote(a, 'research', { question: q, metadata: { urls: u } })}
+                  onPin={(note) => addNote(note.content, 'ledger')}
+                  onDelete={deleteNote}
+                />
+              ) : currentView === 'architect' ? (
+                <KnowledgeArchitect 
+                  onShredded={(staged) => {
+                    const committed = staged.map(s => ({ ...s, notebookId: activeNotebookId! }));
+                    setNotes(prev => [...committed, ...prev]);
+                  }}
+                  onAddRawNote={(content) => addNote(content, 'raw')}
+                />
+              ) : currentView === 'raw' ? (
+                <RawTextEditor 
+                  allNotes={activeNotes}
+                  notebookTitle={activeNotebook?.title || 'Ledger'}
+                />
+              ) : null}
+            </NotepadContainer>
+          )}
+          {currentView === 'shelf' && (
             <NotebookShelf 
               notebooks={notebooks}
               notes={notes}
@@ -122,36 +158,7 @@ export default function App() {
               onBackupPerformed={() => {}}
               onRestore={(d) => { setNotebooks(d.notebooks); setNotes(d.notes); }}
             />
-          ) : currentView === 'ledger' ? (
-            <StenoPad 
-              notes={activeNotes.filter(n => n.type === 'ledger' || n.type === 'research')}
-              onAddNote={(c, type, extra) => addNote(c, type, extra)}
-              onDeleteNote={deleteNote}
-              isNotebook={activeNotebookId === 'general'}
-              allNotebookTitles={notebooks.map(nb => nb.title)}
-            />
-          ) : currentView === 'research' ? (
-            <ResearchHub 
-              notes={activeNotes.filter(n => n.type === 'research')}
-              context={activeNotes.slice(0, 10).map(n => n.content).join('\n')}
-              onAddResearch={(q, a, u) => addNote(a, 'research', { question: q, metadata: { urls: u } })}
-              onPin={(note) => addNote(note.content, 'ledger')}
-              onDelete={deleteNote}
-            />
-          ) : currentView === 'architect' ? (
-            <KnowledgeArchitect 
-              onShredded={(staged) => {
-                const committed = staged.map(s => ({ ...s, notebookId: activeNotebookId! }));
-                setNotes(prev => [...committed, ...prev]);
-              }}
-              onAddRawNote={(content) => addNote(content, 'raw')}
-            />
-          ) : currentView === 'raw' ? (
-            <RawTextEditor 
-              allNotes={activeNotes}
-              notebookTitle={activeNotebook?.title || 'Ledger'}
-            />
-          ) : null}
+          )}
         </div>
       </main>
 
