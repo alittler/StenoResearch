@@ -162,20 +162,12 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="py-2.5 px-6 border-t border-slate-200 bg-white flex justify-between items-center shadow-[0_-1px_5px_rgba(0,0,0,0.02)]">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-            <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
-              <span className="text-slate-400 font-bold">State ID:</span> 
-              <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-800 font-bold border border-slate-200/50">{versionHash}</span>
-            </div>
-          </div>
+      <div className="fixed bottom-4 right-6 pointer-events-none">
+        <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest flex items-center gap-2">
+          <span className="opacity-50">State ID:</span> 
+          <span className="font-bold">{versionHash}</span>
         </div>
-        <div className="text-[9px] font-mono text-slate-300 uppercase tracking-tighter">
-          Steno Ledger Core v1.5
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }

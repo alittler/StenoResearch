@@ -39,48 +39,62 @@ const StenoPad: React.FC<StenoPadProps> = ({
         onAddNote(newNote.trim(), 'ledger');
         setNewNote('');
       }
+      return;
     }
 
     if (showAutocomplete) {
+      const filtered = allNotebookTitles.filter(t => t.toLowerCase().includes(autocompleteQuery.toLowerCase()));
+      
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setAutocompleteIndex(prev => (prev + 1) % allNotebookTitles.length);
+        setAutocompleteIndex(prev => (prev + 1) % (filtered.length || 1));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setAutocompleteIndex(prev => (prev - 1 + allNotebookTitles.length) % allNotebookTitles.length);
-      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        setAutocompleteIndex(prev => (prev - 1 + (filtered.length || 1)) % (filtered.length || 1));
+      } else if ((e.key === 'Enter' || e.key === 'Tab') && filtered.length > 0) {
         e.preventDefault();
-        const filtered = allNotebookTitles.filter(t => t.toLowerCase().includes(autocompleteQuery.toLowerCase()));
-        if (filtered[autocompleteIndex]) {
-          const before = newNote.substring(0, newNote.lastIndexOf('#'));
-          setNewNote(before + '#' + filtered[autocompleteIndex] + ' ');
-          setShowAutocomplete(false);
-        }
+        const before = newNote.substring(0, newNote.lastIndexOf('#'));
+        setNewNote(before + '#' + filtered[autocompleteIndex] + ' ');
+        setShowAutocomplete(false);
       } else if (e.key === 'Escape') {
         setShowAutocomplete(false);
       }
     }
+  };
 
-    if (e.key === '#') {
-      setShowAutocomplete(true);
-      setAutocompleteQuery('');
-      setAutocompleteIndex(0);
-    } else if (showAutocomplete && e.key === ' ') {
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setNewNote(value);
+
+    const cursorPosition = e.target.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const lastHashIndex = textBeforeCursor.lastIndexOf('#');
+
+    if (lastHashIndex !== -1) {
+      const query = textBeforeCursor.substring(lastHashIndex + 1);
+      // Only show if there's no space between # and cursor
+      if (!query.includes(' ')) {
+        setShowAutocomplete(true);
+        setAutocompleteQuery(query);
+        setAutocompleteIndex(0);
+      } else {
+        setShowAutocomplete(false);
+      }
+    } else {
       setShowAutocomplete(false);
-    } else if (showAutocomplete && e.key.length === 1) {
-      setAutocompleteQuery(prev => prev + e.key);
-    } else if (showAutocomplete && e.key === 'Backspace') {
-      if (autocompleteQuery.length === 0) setShowAutocomplete(false);
-      else setAutocompleteQuery(prev => prev.slice(0, -1));
     }
   };
+
+  const filteredTitles = allNotebookTitles.filter(t => 
+    t.toLowerCase().includes(autocompleteQuery.toLowerCase())
+  );
 
   return (
     <div className="flex-1 relative p-10 md:p-20 pt-3">
       {/* Vertical Margin Line (Steno Style) - Centered */}
-      <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[2px] bg-red-200/40 pointer-events-none"></div>
+      <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[2px] bg-red-200/40 pointer-events-none hidden sm:block"></div>
       
-      <div className="pl-10 md:pl-20 space-y-12">
+      <div className="pl-0 sm:pl-10 md:pl-20 space-y-12">
         
         {/* Entry System */}
         <div className="space-y-3 relative">
@@ -93,7 +107,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
             <textarea
               ref={textareaRef}
               value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
+              onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
               placeholder={isNotebook ? "Write something..." : "Quick entry..."}
               className="w-full bg-transparent border-none focus:ring-0 text-xl md:text-2xl font-medium text-stone-800 placeholder-stone-300 resize-none min-h-[100px] leading-relaxed"
@@ -103,10 +117,14 @@ const StenoPad: React.FC<StenoPadProps> = ({
             {/* Autocomplete UI */}
             {showAutocomplete && (
               <div className="absolute left-0 top-full mt-2 w-64 bg-white border border-stone-200 rounded-xl shadow-2xl z-50 overflow-hidden">
-                <div className="p-2 bg-stone-50 border-b border-stone-100 text-[9px] font-black uppercase tracking-widest text-stone-400">Link to Notebook</div>
-                {allNotebookTitles
-                  .filter(t => t.toLowerCase().includes(autocompleteQuery.toLowerCase()))
-                  .map((title, i) => (
+                <div className="p-2 bg-stone-50 border-b border-stone-100 text-[9px] font-black uppercase tracking-widest text-stone-400 flex justify-between items-center">
+                  <span>Link to Notebook</span>
+                  {filteredTitles.length > 0 && (
+                    <span className="text-[8px] opacity-50">Enter to select</span>
+                  )}
+                </div>
+                {filteredTitles.length > 0 ? (
+                  filteredTitles.map((title, i) => (
                     <button
                       key={title}
                       onClick={() => {
@@ -117,10 +135,13 @@ const StenoPad: React.FC<StenoPadProps> = ({
                       }}
                       className={`w-full text-left px-4 py-2.5 text-sm hover:bg-stone-50 transition-colors flex items-center gap-3 ${i === autocompleteIndex ? 'bg-stone-100' : ''}`}
                     >
-                      <span className="w-2 h-2 rounded-full bg-stone-300"></span>
+                      <span className={`w-2 h-2 rounded-full ${i === autocompleteIndex ? 'bg-blue-400' : 'bg-stone-300'}`}></span>
                       <span className="font-medium text-stone-700">{title}</span>
                     </button>
-                  ))}
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-xs text-stone-400 italic">No matching notebooks</div>
+                )}
               </div>
             )}
           </div>
