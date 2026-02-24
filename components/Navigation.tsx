@@ -39,8 +39,8 @@ const Navigation: React.FC<NavigationProps> = ({
                 pointer-events-auto
                 relative flex flex-col items-center justify-start transition-all duration-500 group
                 ${activeView === tab.id 
-                  ? 'h-20 w-24 sm:w-32 rounded-b-3xl shadow-[0_10px_30px_rgba(0,0,0,0.2)]'
-                  : 'h-10 w-16 sm:w-20 rounded-b-2xl hover:h-14 shadow-md'
+                  ? 'h-20 w-24 sm:w-32 shadow-[0_10px_30px_rgba(0,0,0,0.2)]'
+                  : 'h-10 w-16 sm:w-20 hover:h-14 shadow-md'
                 }
               `}
               style={{ 
@@ -49,7 +49,7 @@ const Navigation: React.FC<NavigationProps> = ({
               }}
             >
               {/* Divider Texture & Plastic Tab Effect */}
-              <div className="absolute inset-0 opacity-20 pointer-events-none bg-[linear-gradient(to_bottom,_rgba(255,255,255,0.3)_0%,_transparent_40%,_rgba(0,0,0,0.1)_100%)] rounded-b-inherit"></div>
+              <div className="absolute inset-0 opacity-20 pointer-events-none bg-[linear-gradient(to_bottom,_rgba(255,255,255,0.3)_0%,_transparent_40%,_rgba(0,0,0,0.1)_100%)]"></div>
               
               {/* Tab Content */}
               <div className={`flex flex-col items-center gap-1 text-white transition-all pt-2 ${activeView === tab.id ? 'scale-110' : 'scale-100'}`}>
@@ -59,18 +59,6 @@ const Navigation: React.FC<NavigationProps> = ({
               </div>
             </button>
           ))}
-          
-          {/* Close/Shelf Button (Physical Tab Style) */}
-          <button 
-            onClick={onBackToShelf}
-            className="pointer-events-auto relative h-10 w-14 sm:w-16 bg-stone-800 rounded-b-2xl flex items-center justify-center hover:h-14 transition-all duration-300 group z-0 shadow-md"
-            title="Close Notepad & Back to Shelf"
-          >
-            <div className="absolute inset-0 opacity-20 pointer-events-none bg-[linear-gradient(to_top,_rgba(255,255,255,0.1)_0%,_transparent_100%)] rounded-b-inherit"></div>
-            <svg className="w-4 h-4 text-stone-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
       )}
 
@@ -82,19 +70,6 @@ const Navigation: React.FC<NavigationProps> = ({
             {activeNotebookTitle}
           </span>
         </div>
-      )}
-
-      {/* Fallback Close Button for when tabs are hidden (e.g. general notebook) */}
-      {hideTabs && (
-        <button 
-          onClick={onBackToShelf}
-          className="absolute top-[calc(100%-30px)] right-8 z-50 w-16 h-16 bg-stone-800 shadow-2xl rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-all group"
-          title="Back to Shelf"
-        >
-          <svg className="w-8 h-8 text-stone-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
       )}
     </>
   );

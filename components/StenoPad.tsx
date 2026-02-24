@@ -154,6 +154,12 @@ const StenoPad: React.FC<StenoPadProps> = ({
               <div className="flex items-start gap-6">
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-stone-400">
+                    <div className={`w-2 h-2 rounded-full ${
+                      note.type === 'ledger' ? 'bg-red-500' :
+                      note.type === 'research' ? 'bg-blue-500' :
+                      note.type === 'outline' ? 'bg-green-500' :
+                      note.type === 'raw' ? 'bg-purple-500' : 'bg-stone-300'
+                    }`}></div>
                     <span>{new Date(note.timestamp).toLocaleDateString()}</span>
                     <span className="w-1 h-1 rounded-full bg-stone-200"></span>
                     <span>{note.type}</span>

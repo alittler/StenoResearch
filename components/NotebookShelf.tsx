@@ -107,7 +107,7 @@ const NotebookShelf: React.FC<NotebookShelfProps> = ({
             <div 
               key={nb.id} 
               onClick={() => onSelect(nb.id)} 
-              className={`group relative h-56 border-2 rounded-3xl shadow-sm hover:shadow-xl transition-all cursor-pointer p-8 flex flex-col overflow-hidden ${
+              className={`group relative h-56 border-2 shadow-sm hover:shadow-xl transition-all cursor-pointer p-8 flex flex-col overflow-hidden ${
                 isMain 
                 ? 'bg-[#fffbeb] border-amber-200 hover:border-amber-400' 
                 : 'bg-white border-slate-200 hover:border-slate-300'
@@ -152,7 +152,7 @@ const NotebookShelf: React.FC<NotebookShelfProps> = ({
 
         <button 
           onClick={() => setIsAdding(true)} 
-          className="h-56 border-4 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-4 text-slate-300 hover:border-slate-400 hover:text-slate-500 transition-all bg-slate-50/50 group"
+          className="h-56 border-4 border-dashed border-slate-200 flex flex-col items-center justify-center gap-4 text-slate-300 hover:border-slate-400 hover:text-slate-500 transition-all bg-slate-50/50 group"
         >
           <div className="w-16 h-16 rounded-full border-4 border-slate-200 flex items-center justify-center group-hover:bg-white group-hover:border-slate-300 transition-all"><svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg></div>
           <span className="font-black text-xs uppercase tracking-[0.2em]">Create New Ledger</span>
@@ -161,7 +161,7 @@ const NotebookShelf: React.FC<NotebookShelfProps> = ({
 
       {isAdding && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100">
+          <div className="w-full max-w-md bg-white shadow-2xl overflow-hidden border border-slate-100">
             <div className="p-6 flex justify-between items-center border-b border-slate-100 bg-slate-50/50">
               <h2 className="font-black text-slate-800 uppercase tracking-widest text-sm">Initialize Project</h2>
               <button onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
@@ -169,15 +169,15 @@ const NotebookShelf: React.FC<NotebookShelfProps> = ({
             <div className="p-10 space-y-8">
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ledger Name</label>
-                <input autoFocus value={title} onChange={e => setTitle(e.target.value)} onKeyDown={handleKeyDown} placeholder="Project ID..." className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-slate-800 font-bold focus:border-blue-500 outline-none transition-all" />
+                <input autoFocus value={title} onChange={e => setTitle(e.target.value)} onKeyDown={handleKeyDown} placeholder="Project ID..." className="w-full bg-slate-50 border-2 border-slate-100 p-4 text-slate-800 font-bold focus:border-blue-500 outline-none transition-all" />
               </div>
               <div className="space-y-4">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Color ID</label>
                 <div className="flex justify-between gap-2">
-                  {COLORS.map(c => <button key={c.hex} onClick={() => setColor(c.hex)} className={`h-10 w-10 rounded-full border-4 transition-all ${color === c.hex ? 'border-slate-800 scale-110 shadow-lg' : 'border-transparent'}`} style={{ backgroundColor: c.hex }} />)}
+                  {COLORS.map(c => <button key={c.hex} onClick={() => setColor(c.hex)} className={`h-10 w-10 border-4 transition-all ${color === c.hex ? 'border-slate-800 scale-110 shadow-lg' : 'border-transparent'}`} style={{ backgroundColor: c.hex }} />)}
                 </div>
               </div>
-              <button disabled={!title.trim()} onClick={handleAddProject} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-black transition-all disabled:opacity-20 shadow-xl">Initialize Ledger</button>
+              <button disabled={!title.trim()} onClick={handleAddProject} className="w-full py-5 bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-black transition-all disabled:opacity-20 shadow-xl">Initialize Ledger</button>
             </div>
           </div>
         </div>

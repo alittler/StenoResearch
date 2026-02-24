@@ -15,7 +15,7 @@ import { generateSHA256 } from './utils/crypto';
 const STORAGE_KEY = 'steno_ledger_core_v2';
 
 const INITIAL_NOTEBOOKS: Notebook[] = [
-  { id: 'general', title: 'Notebook', color: '#64748b', createdAt: Date.now(), coreConcept: '' }
+  { id: 'general', title: 'General Ledger', color: '#64748b', createdAt: Date.now(), coreConcept: '' }
 ];
 
 export default function App() {
@@ -34,10 +34,10 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (parsed.notebooks) {
-          // Migration: Rename 'Primary Project Ledger' to 'Notebook'
+          // Migration: Rename 'Primary Project Ledger' to 'General Ledger'
           const migratedNotebooks = parsed.notebooks.map((nb: Notebook) => 
-            nb.id === 'general' && nb.title === 'Primary Project Ledger' 
-              ? { ...nb, title: 'Notebook' } 
+            nb.id === 'general' && (nb.title === 'Primary Project Ledger' || nb.title === 'Notebook')
+              ? { ...nb, title: 'General Ledger' } 
               : nb
           );
           setNotebooks(migratedNotebooks);
@@ -105,6 +105,7 @@ export default function App() {
           {currentView !== 'shelf' && (
             <NotepadContainer 
               title={activeNotebook?.title}
+              onBackToShelf={() => setCurrentView('shelf')}
               navigation={
                 <Navigation 
                   activeView={currentView}
