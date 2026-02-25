@@ -43,13 +43,13 @@
           background-attachment: local;
         }
 
-        /* Opaque Torn Paper Stub - No Holes */
+        /* Opaque Torn Paper Stub - With Holes to match image */
         .torn-paper-stack {
           position: absolute;
           top: 0;
           left: 0;
-          right: 0;
-          z-index: 300;
+          width: 100%; /* Fixed width to move it to the left */
+          z-index: 15; /* Between paper (10) and binder (20) */
           pointer-events: none;
         }
 
@@ -57,7 +57,7 @@
           position: absolute;
           top: 0;
           left: 0;
-          right: 0;
+          width: 100%;
         }
 
         .layer-1 { transform: translateY(0); z-index: 3; }
@@ -65,24 +65,27 @@
         .layer-3 { 
           transform: translateY(-8px) translateX(-1px) rotate(-0.3deg); 
           z-index: 1; 
-          filter: drop-shadow(0 3px 5px rgba(0,0,0,0.2)); /* Only bottom layer casts shadow */
+          filter: drop-shadow(0 3px 5px rgba(0,0,0,0.15)); /* Subtle shadow for the stack */
         }
 
         .torn-paper-edge {
-          height: 30px;
+          height: 100px; /* Increased height */
           background-color: #f5f1e6;
+          position: relative;
           /* Organic, wavy torn edge matching the reference image */
           clip-path: polygon(
             0% 0%, 100% 0%, 100% 88%,
             98% 89%, 96% 87%, 94% 90%, 92% 88%, 90% 91%, 88% 89%, 86% 92%, 84% 90%, 82% 93%, 80% 91%, 78% 94%, 76% 92%, 74% 95%, 72% 93%, 70% 96%, 68% 94%, 66% 97%, 64% 95%, 62% 98%, 60% 96%, 58% 99%, 56% 97%, 54% 100%, 52% 98%, 50% 99%, 48% 97%, 46% 98%, 44% 96%, 42% 97%, 40% 95%, 38% 96%, 36% 94%, 34% 95%, 32% 93%, 30% 94%, 28% 92%, 26% 93%, 24% 91%, 22% 92%, 20% 90%, 18% 91%, 16% 89%, 14% 90%, 12% 88%, 10% 89%, 8% 87%, 6% 88%, 4% 86%, 2% 87%, 0% 85%
           );
-          /* Ruling lines on the stub itself - matching the reference image's subtle look */
+          /* Ruling lines */
           background-image: 
+            /* Noise and lines */
             url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E"),
             linear-gradient(90deg, transparent 79px, rgba(239, 68, 68, 0.08) 79px, rgba(239, 68, 68, 0.08) 81px, transparent 81px),
             linear-gradient(0deg, transparent 31px, rgba(0, 0, 0, 0.05) 31px, rgba(0, 0, 0, 0.05) 32px, transparent 32px);
           background-size: auto, 100% 100%, 100% 32px;
-          position: relative;
+          background-position: 0 0, 0 0, 0 0;
+          background-repeat: no-repeat, no-repeat, repeat;
         }
 
         /* Fibrous highlight overlay for the stub's torn edge */

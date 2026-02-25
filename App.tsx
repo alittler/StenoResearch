@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ProjectNote, AppView, Notebook } from './types';
+import { BrowserRouter, Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import StenoPad from './components/StenoPad';
 import ResearchHub from './components/ResearchHub';
@@ -18,15 +19,26 @@ const INITIAL_NOTEBOOKS: Notebook[] = [
   { id: 'general', title: 'General Ledger', color: '#64748b', createdAt: Date.now(), coreConcept: '' }
 ];
 
-export default function App() {
+function AppContent() {
   const [notebooks, setNotebooks] = useState<Notebook[]>(INITIAL_NOTEBOOKS);
   const [notes, setNotes] = useState<ProjectNote[]>([]);
-  const [activeNotebookId, setActiveNotebookId] = useState<string | null>('general');
-  const [currentView, setCurrentView] = useState<AppView>('ledger');
   const [isInitialized, setIsInitialized] = useState(false);
   const [versionHash, setVersionHash] = useState<string>('INIT');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const navigate = useNavigate();
+  const { notebookId, view } = useParams<{ notebookId?: string; view?: string }>();
+  const location = useLocation();
+
+  const activeNotebookId = notebookId || 'general';
+  const currentView = (view as AppView) || 'ledger';
 
   const lastStateString = useRef<string>('');
+
+  // Scroll to top on view change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [location.pathname]);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -34,7 +46,6 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (parsed.notebooks) {
-          // Migration: Rename 'Primary Project Ledger' to 'General Ledger'
           const migratedNotebooks = parsed.notebooks.map((nb: Notebook) => 
             nb.id === 'general' && (nb.title === 'Primary Project Ledger' || nb.title === 'Notebook')
               ? { ...nb, title: 'General Ledger' } 
@@ -88,30 +99,30 @@ export default function App() {
     setNotes(prev => prev.map(n => n.id === id ? { ...n, ...updates } : n));
   };
 
-  const updateNotebook = (id: string, updates: Partial<Notebook>) => {
-    setNotebooks(prev => prev.map(nb => nb.id === id ? { ...nb, ...updates } : nb));
-  };
-
   const deleteNote = (id: string) => {
     setNotes(prev => prev.filter(n => n.id !== id));
   };
 
   if (!isInitialized) return null;
 
+  const isShelf = location.pathname === '/';
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc] text-[#1e293b]">
       <main className="flex-1 w-full overflow-y-auto relative">
-        <div className={`mx-auto w-full h-full relative ${currentView === 'shelf' ? '' : 'max-w-[1400px] px-4 lg:px-12 py-8 pb-32'}`}>
-          {currentView !== 'shelf' && (
+        <div className={`mx-auto w-full h-full relative ${isShelf ? '' : 'max-w-[1400px] px-4 lg:px-12 py-8 pb-32'}`}>
+          {!isShelf && (
             <NotepadContainer 
               title={activeNotebook?.title}
-              onBackToShelf={() => setCurrentView('shelf')}
+              onBackToShelf={() => navigate('/')}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
               navigation={
                 <Navigation 
                   activeView={currentView}
-                  onViewChange={setCurrentView}
+                  onViewChange={(v) => navigate(`/notebook/${activeNotebookId}/${v}`)}
                   activeNotebookTitle={activeNotebook?.title}
-                  onBackToShelf={() => setCurrentView('shelf')}
+                  onBackToShelf={() => navigate('/')}
                   hideTabs={activeNotebookId === 'general'}
                 />
               }
@@ -124,6 +135,7 @@ export default function App() {
                   onDeleteNote={deleteNote}
                   isNotebook={activeNotebookId === 'general'}
                   allNotebookTitles={notebooks.map(nb => nb.title)}
+                  searchQuery={searchQuery}
                 />
               ) : currentView === 'research' ? (
                 <ResearchHub 
@@ -149,11 +161,11 @@ export default function App() {
               ) : null}
             </NotepadContainer>
           )}
-          {currentView === 'shelf' && (
+          {isShelf && (
             <NotebookShelf 
               notebooks={notebooks}
               notes={notes}
-              onSelect={(id) => { setActiveNotebookId(id); setCurrentView('ledger'); }}
+              onSelect={(id) => navigate(`/notebook/${id}/ledger`)}
               onAdd={(t, c) => setNotebooks([...notebooks, { id: crypto.randomUUID(), title: t, color: c, createdAt: Date.now(), coreConcept: '' }])}
               onDelete={(id) => setNotebooks(notebooks.filter(n => n.id !== id))}
               hasUnsavedChanges={false}
@@ -171,5 +183,16 @@ export default function App() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<AppContent />} />
+        <Route path="/notebook/:notebookId/:view" element={<AppContent />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

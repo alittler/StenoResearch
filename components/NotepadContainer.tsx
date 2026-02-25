@@ -8,26 +8,57 @@ interface NotepadContainerProps {
   navigation?: React.ReactNode;
   title?: string;
   onBackToShelf?: () => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
-const NotepadContainer: React.FC<NotepadContainerProps> = ({ children, navigation, title, onBackToShelf }) => {
+const NotepadContainer: React.FC<NotepadContainerProps> = ({ 
+  children, 
+  navigation, 
+  title, 
+  onBackToShelf,
+  searchQuery,
+  onSearchChange
+}) => {
   return (
-    <div className="relative w-full">
-      {/* Black Book Binding */}
-      <div className="h-16 bg-[#1a1a1a] border-b border-black relative z-20 overflow-visible shadow-lg flex items-center px-6">
-        {onBackToShelf && (
-          <button 
-            onClick={onBackToShelf}
-            className="p-2 hover:bg-white/10 transition-colors group relative z-30"
-            title="Back to Shelf"
-          >
-            <svg className="w-6 h-6 text-stone-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </button>
-        )}
-        
-        {/* Leather-like texture overlay */}
+    <div className="relative w-full flex flex-col lg:flex-row items-start gap-0 lg:gap-4">
+      <div className="flex-1 relative w-full">
+        {/* Black Book Binding */}
+        <div className="h-12 bg-[#1a1a1a] border-b border-black relative z-20 overflow-visible shadow-lg flex items-center justify-between px-6">
+          <div className="flex items-center gap-4">
+            {onBackToShelf && (
+              <button 
+                onClick={onBackToShelf}
+                className="p-2 hover:bg-white/10 transition-colors group relative z-30"
+                title="Back to Shelf"
+              >
+                <svg className="w-6 h-6 text-stone-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
+            )}
+            <h1 className="text-stone-400 font-black uppercase tracking-[0.3em] text-[10px] hidden sm:block">{title}</h1>
+          </div>
+
+          {/* Search Bar in Header */}
+          {onSearchChange && (
+            <div className="relative max-w-[200px] sm:max-w-xs w-full group">
+              <input 
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Search..."
+                className="w-full bg-white/5 border-none rounded-full px-4 py-1.5 text-xs text-white placeholder-stone-500 focus:ring-1 focus:ring-white/20 transition-all"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 group-focus-within:text-white transition-colors">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+          )}
+          
+          {/* Leather-like texture overlay */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }}></div>
         
@@ -61,9 +92,10 @@ const NotepadContainer: React.FC<NotepadContainerProps> = ({ children, navigatio
           {children}
         </div>
       </div>
+    </div>
 
-      {/* Navigation - Positioned after paper in DOM and with higher z-index to be clickable */}
-      <div className="absolute bottom-0 left-0 w-full z-50 pointer-events-none">
+    {/* Navigation - Side on Desktop, Bottom on Mobile */}
+      <div className="lg:w-32 lg:h-full lg:sticky lg:top-8 pointer-events-none">
         {navigation}
       </div>
     </div>

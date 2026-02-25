@@ -11,6 +11,7 @@ interface StenoPadProps {
   onDeleteNote: (id: string) => void;
   isNotebook?: boolean;
   allNotebookTitles: string[];
+  searchQuery?: string;
 }
 
 const StenoPad: React.FC<StenoPadProps> = ({ 
@@ -19,10 +20,10 @@ const StenoPad: React.FC<StenoPadProps> = ({
   onUpdateNote,
   onDeleteNote, 
   isNotebook = false,
-  allNotebookTitles
+  allNotebookTitles,
+  searchQuery = ''
 }) => {
   const [newNote, setNewNote] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -110,27 +111,8 @@ const StenoPad: React.FC<StenoPadProps> = ({
 
   return (
     <div className="flex-1 relative p-10 md:p-20 pt-3">
-      {/* Vertical Margin Line (Steno Style) - Centered */}
-      <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[2px] bg-red-200/40 pointer-events-none hidden sm:block"></div>
-      
       <div className="pl-0 sm:pl-10 md:pl-20 space-y-12">
         
-        {/* Search Bar */}
-        <div className="relative max-w-md">
-          <input 
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search notes..."
-            className="w-full bg-stone-100/50 border-none rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-stone-200 transition-all placeholder-stone-400"
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-300">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-        </div>
-
         {/* Entry System */}
         <div className="space-y-3 relative">
           {!isNotebook && (
