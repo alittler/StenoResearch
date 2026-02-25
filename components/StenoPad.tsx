@@ -7,6 +7,7 @@ import { ProjectNote } from '../types';
 interface StenoPadProps {
   notes: ProjectNote[];
   onAddNote: (content: string, type: 'ledger' | 'research', extra?: any) => void;
+  onUpdateNote: (id: string, updates: Partial<ProjectNote>) => void;
   onDeleteNote: (id: string) => void;
   isNotebook?: boolean;
   allNotebookTitles: string[];
@@ -15,15 +16,20 @@ interface StenoPadProps {
 const StenoPad: React.FC<StenoPadProps> = ({ 
   notes, 
   onAddNote, 
+  onUpdateNote,
   onDeleteNote, 
   isNotebook = false,
   allNotebookTitles
 }) => {
   const [newNote, setNewNote] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [autocompleteQuery, setAutocompleteQuery] = useState('');
   const [autocompleteIndex, setAutocompleteIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -31,6 +37,14 @@ const StenoPad: React.FC<StenoPadProps> = ({
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
   }, [newNote]);
+
+  useEffect(() => {
+    if (editRef.current && editingId) {
+      editRef.current.style.height = 'auto';
+      editRef.current.style.height = editRef.current.scrollHeight + 'px';
+      editRef.current.focus();
+    }
+  }, [editValue, editingId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey && !showAutocomplete) {
@@ -89,6 +103,11 @@ const StenoPad: React.FC<StenoPadProps> = ({
     t.toLowerCase().includes(autocompleteQuery.toLowerCase())
   );
 
+  const filteredNotes = notes.filter(n => 
+    n.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (n.type && n.type.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   return (
     <div className="flex-1 relative p-10 md:p-20 pt-3">
       {/* Vertical Margin Line (Steno Style) - Centered */}
@@ -96,6 +115,22 @@ const StenoPad: React.FC<StenoPadProps> = ({
       
       <div className="pl-0 sm:pl-10 md:pl-20 space-y-12">
         
+        {/* Search Bar */}
+        <div className="relative max-w-md">
+          <input 
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search notes..."
+            className="w-full bg-stone-100/50 border-none rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-stone-200 transition-all placeholder-stone-400"
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-300">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+
         {/* Entry System */}
         <div className="space-y-3 relative">
           {!isNotebook && (
@@ -149,7 +184,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
 
         {/* Notes List */}
         <div className="space-y-16 pb-20">
-          {notes.map((note) => (
+          {filteredNotes.map((note) => (
             <div key={note.id} className="group relative">
               <div className="flex items-start gap-6">
                 <div className="flex-1 space-y-2">
@@ -164,9 +199,38 @@ const StenoPad: React.FC<StenoPadProps> = ({
                     <span className="w-1 h-1 rounded-full bg-stone-200"></span>
                     <span>{note.type}</span>
                   </div>
-                  <div className="text-lg md:text-xl text-stone-700 leading-relaxed whitespace-pre-wrap">
-                    {note.content}
-                  </div>
+                  
+                  {editingId === note.id ? (
+                    <textarea
+                      ref={editRef}
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onBlur={() => {
+                        onUpdateNote(note.id, { content: editValue });
+                        setEditingId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          onUpdateNote(note.id, { content: editValue });
+                          setEditingId(null);
+                        } else if (e.key === 'Escape') {
+                          setEditingId(null);
+                        }
+                      }}
+                      className="w-full bg-stone-50 border-none focus:ring-0 text-lg md:text-xl text-stone-700 leading-relaxed whitespace-pre-wrap rounded-lg p-2 -ml-2"
+                    />
+                  ) : (
+                    <div 
+                      onClick={() => {
+                        setEditingId(note.id);
+                        setEditValue(note.content);
+                      }}
+                      className="text-lg md:text-xl text-stone-700 leading-relaxed whitespace-pre-wrap cursor-pointer hover:bg-stone-50/50 transition-colors rounded-lg p-2 -ml-2"
+                    >
+                      {note.content}
+                    </div>
+                  )}
                 </div>
                 <button 
                   onClick={() => onDeleteNote(note.id)}
@@ -179,6 +243,11 @@ const StenoPad: React.FC<StenoPadProps> = ({
               </div>
             </div>
           ))}
+          {filteredNotes.length === 0 && searchQuery && (
+            <div className="text-center py-20 text-stone-400 italic">
+              No notes found matching "{searchQuery}"
+            </div>
+          )}
         </div>
       </div>
     </div>

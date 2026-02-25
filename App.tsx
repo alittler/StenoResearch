@@ -120,6 +120,7 @@ export default function App() {
                 <StenoPad 
                   notes={activeNotes.filter(n => n.type === 'ledger' || n.type === 'research')}
                   onAddNote={(c, type, extra) => addNote(c, type, extra)}
+                  onUpdateNote={updateNote}
                   onDeleteNote={deleteNote}
                   isNotebook={activeNotebookId === 'general'}
                   allNotebookTitles={notebooks.map(nb => nb.title)}

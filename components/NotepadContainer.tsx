@@ -18,7 +18,7 @@ const NotepadContainer: React.FC<NotepadContainerProps> = ({ children, navigatio
         {onBackToShelf && (
           <button 
             onClick={onBackToShelf}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors group relative z-30"
+            className="p-2 hover:bg-white/10 transition-colors group relative z-30"
             title="Back to Shelf"
           >
             <svg className="w-6 h-6 text-stone-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -43,11 +43,17 @@ const NotepadContainer: React.FC<NotepadContainerProps> = ({ children, navigatio
       </div>
 
       <div className="border-x-2 border-b-2 border-stone-200 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] relative z-10 min-h-[calc(100vh-180px)] flex flex-col paper-texture pb-12 -mt-2">
-        {/* Opaque Torn Edge Overlay */}
-        <div className="torn-paper-edge">
-          {[...Array(16)].map((_, i) => (
-            <div key={i} className="paper-hole"></div>
-          ))}
+        {/* Opaque Torn Edge Overlay with Shadow Wrapper - Stacked Layers */}
+        <div className="torn-paper-stack">
+          <div className="torn-paper-shadow-container layer-3">
+            <div className="torn-paper-edge"></div>
+          </div>
+          <div className="torn-paper-shadow-container layer-2">
+            <div className="torn-paper-edge"></div>
+          </div>
+          <div className="torn-paper-shadow-container layer-1">
+            <div className="torn-paper-edge"></div>
+          </div>
         </div>
         
         {/* Content Area */}
