@@ -21,10 +21,10 @@ const NotepadContainer: React.FC<NotepadContainerProps> = ({
   onSearchChange
 }) => {
   return (
-    <div className="relative w-full flex flex-col lg:flex-row items-start gap-0 lg:gap-4">
+    <div className="relative w-full flex flex-col items-start gap-0">
       <div className="flex-1 relative w-full">
         {/* Black Book Binding */}
-        <div className="h-12 bg-[#1a1a1a] border-b border-black relative z-20 overflow-visible shadow-lg flex items-center justify-between px-6">
+        <div className="h-12 w-full bg-[#1a1a1a] border-b border-black border-x-2 border-transparent relative z-20 overflow-visible shadow-lg flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
             {onBackToShelf && (
               <button 
@@ -59,44 +59,46 @@ const NotepadContainer: React.FC<NotepadContainerProps> = ({
           )}
           
           {/* Leather-like texture overlay */}
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
-             style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }}></div>
-        
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60 pointer-events-none"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent h-1/3 pointer-events-none"></div>
-        
-        {/* Spine Ribbing Details */}
-        <div className="absolute inset-x-0 top-0 bottom-0 flex justify-around px-16 items-center opacity-10 pointer-events-none">
-          {[...Array(12)].map((_, i) => (
-            <div key={i} className="w-[1px] h-full bg-black shadow-[1px_0_0_rgba(255,255,255,0.05)]"></div>
-          ))}
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+               style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }}></div>
+          
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60 pointer-events-none"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent h-1/3 pointer-events-none"></div>
+          
+          {/* Spine Ribbing Details */}
+          <div className="absolute inset-x-0 top-0 bottom-0 flex justify-around px-16 items-center opacity-10 pointer-events-none">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="w-[1px] h-full bg-black shadow-[1px_0_0_rgba(255,255,255,0.05)]"></div>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="border-x-2 border-b-2 border-stone-200 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] relative z-10 min-h-[calc(100vh-180px)] flex flex-col paper-texture pb-12 -mt-2">
-        {/* Opaque Torn Edge Overlay with Shadow Wrapper - Stacked Layers */}
-        <div className="torn-paper-stack">
-          <div className="torn-paper-shadow-container layer-3">
-            <div className="torn-paper-edge"></div>
-          </div>
-          <div className="torn-paper-shadow-container layer-2">
-            <div className="torn-paper-edge"></div>
-          </div>
-          <div className="torn-paper-shadow-container layer-1">
-            <div className="torn-paper-edge"></div>
-          </div>
+      <div className="relative w-full">
+        {/* Navigation - Absolute on Desktop (Right), Fixed on Mobile (Bottom) */}
+        <div className="lg:absolute lg:left-full lg:top-0 lg:h-full lg:w-auto pointer-events-none z-0">
+          {navigation}
         </div>
-        
-        {/* Content Area */}
-        <div className="flex-1 flex flex-col overflow-y-auto px-8 sm:px-12 pt-8">
-          {children}
-        </div>
-      </div>
-    </div>
 
-    {/* Navigation - Side on Desktop, Bottom on Mobile */}
-      <div className="lg:w-32 lg:h-full lg:sticky lg:top-8 pointer-events-none">
-        {navigation}
+        <div className="w-full border-x-2 border-b-2 border-stone-200 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] relative z-10 min-h-[calc(100vh-180px)] flex flex-col paper-texture pb-12 -mt-2 overflow-visible">
+          {/* Opaque Torn Edge Overlay with Shadow Wrapper - Stacked Layers */}
+          <div className="torn-paper-stack">
+            <div className="torn-paper-shadow-container layer-3">
+              <div className="torn-paper-edge"></div>
+            </div>
+            <div className="torn-paper-shadow-container layer-2">
+              <div className="torn-paper-edge"></div>
+            </div>
+            <div className="torn-paper-shadow-container layer-1">
+              <div className="torn-paper-edge"></div>
+            </div>
+          </div>
+          
+          {/* Content Area */}
+          <div className="flex-1 flex flex-col overflow-y-auto px-8 sm:px-12 pt-8">
+            {children}
+          </div>
+        </div>
       </div>
     </div>
   );

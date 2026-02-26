@@ -34,21 +34,21 @@
           background-color: #f5f1e6; /* Accurate aged cream from image */
           background-image: 
             /* Subtle parchment noise */
-            url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E"),
+            url("data:image/svg+xml,%3Csvg width='256' height='256' viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E"),
             /* Vertical margin line */
             linear-gradient(90deg, transparent 79px, rgba(239, 68, 68, 0.1) 79px, rgba(239, 68, 68, 0.1) 81px, transparent 81px),
             /* Horizontal ruling lines - subtle like the image */
             linear-gradient(0deg, transparent 31px, rgba(0, 0, 0, 0.06) 31px, rgba(0, 0, 0, 0.06) 32px, transparent 32px);
-          background-size: auto, 100% 100%, 100% 32px;
+          background-size: 256px 256px, 100% 100%, 100% 32px;
           background-attachment: local;
         }
 
         /* Opaque Torn Paper Stub - With Holes to match image */
         .torn-paper-stack {
           position: absolute;
-          top: 0;
+          top: 8px; /* Positioned right below the binder edge (accounting for -mt-2) */
           left: 0;
-          width: 100%; /* Fixed width to move it to the left */
+          width: 100%; /* Size of the paper */
           z-index: 15; /* Between paper (10) and binder (20) */
           pointer-events: none;
         }
@@ -65,11 +65,11 @@
         .layer-3 { 
           transform: translateY(-8px) translateX(-1px) rotate(-0.3deg); 
           z-index: 1; 
-          filter: drop-shadow(0 3px 5px rgba(0,0,0,0.15)); /* Subtle shadow for the stack */
+          filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); /* Darker shadow for the stack */
         }
 
         .torn-paper-edge {
-          height: 100px; /* Increased height */
+          height: 33px; /* Reduced to 1/3 of 100px */
           background-color: #f5f1e6;
           position: relative;
           /* Organic, wavy torn edge matching the reference image */
@@ -80,12 +80,13 @@
           /* Ruling lines */
           background-image: 
             /* Noise and lines */
-            url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E"),
+            url("data:image/svg+xml,%3Csvg width='256' height='256' viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E"),
             linear-gradient(90deg, transparent 79px, rgba(239, 68, 68, 0.08) 79px, rgba(239, 68, 68, 0.08) 81px, transparent 81px),
             linear-gradient(0deg, transparent 31px, rgba(0, 0, 0, 0.05) 31px, rgba(0, 0, 0, 0.05) 32px, transparent 32px);
-          background-size: auto, 100% 100%, 100% 32px;
+          background-size: 256px 256px, 100% 100%, 100% 32px;
           background-position: 0 0, 0 0, 0 0;
-          background-repeat: no-repeat, no-repeat, repeat;
+          background-repeat: repeat, no-repeat, repeat;
+          background-attachment: local;
         }
 
         /* Fibrous highlight overlay for the stub's torn edge */
@@ -138,7 +139,6 @@
 </head>
 <body>
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
-<script type="module" src="/index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>

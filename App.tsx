@@ -110,7 +110,7 @@ function AppContent() {
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc] text-[#1e293b]">
       <main className="flex-1 w-full overflow-y-auto relative">
-        <div className={`mx-auto w-full h-full relative ${isShelf ? '' : 'max-w-[1400px] px-4 lg:px-12 py-8 pb-32'}`}>
+        <div className={`mx-auto w-full h-full relative ${isShelf ? '' : 'max-w-[1400px] px-4 lg:px-32 py-8 pb-32'}`}>
           {!isShelf && (
             <NotepadContainer 
               title={activeNotebook?.title}
@@ -176,7 +176,7 @@ function AppContent() {
         </div>
       </main>
 
-      <div className="fixed bottom-4 right-6 pointer-events-none">
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 pointer-events-none z-50">
         <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest flex items-center gap-2">
           <span className="opacity-50">State ID:</span> 
           <span className="font-bold">{versionHash}</span>
