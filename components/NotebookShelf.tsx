@@ -125,7 +125,12 @@ const NotebookShelf: React.FC<NotebookShelfProps> = ({
                         {nb.title}
                       </h3>
                       <div className="mt-3 flex items-center gap-2">
-                        <span className="text-[9px] font-black bg-amber-200 text-amber-700 px-2 py-0.5 rounded uppercase tracking-widest">Main Pad</span>
+                        <span className="text-[9px] font-black bg-amber-200 text-amber-700 px-2 py-0.5 rounded uppercase tracking-widest flex items-center gap-1">
+                          <svg className="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                          </svg>
+                          Locked Pad
+                        </span>
                         <span className="text-[9px] font-bold text-amber-600/70 uppercase tracking-widest">{count} records</span>
                       </div>
                     </div>
@@ -152,10 +157,10 @@ const NotebookShelf: React.FC<NotebookShelfProps> = ({
 
         <button 
           onClick={() => setIsAdding(true)} 
-          className="h-56 border-4 border-dashed border-slate-200 flex flex-col items-center justify-center gap-4 text-slate-300 hover:border-slate-400 hover:text-slate-500 transition-all bg-slate-50/50 group"
+          className="h-28 border-4 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-300 hover:border-slate-400 hover:text-slate-500 transition-all bg-slate-50/50 group"
         >
-          <div className="w-16 h-16 rounded-full border-4 border-slate-200 flex items-center justify-center group-hover:bg-white group-hover:border-slate-300 transition-all"><svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg></div>
-          <span className="font-black text-xs uppercase tracking-[0.2em]">Create New Ledger</span>
+          <div className="w-10 h-10 rounded-full border-2 border-slate-200 flex items-center justify-center group-hover:bg-white group-hover:border-slate-300 transition-all"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg></div>
+          <span className="font-black text-[10px] uppercase tracking-[0.2em]">Create New Ledger</span>
         </button>
       </div>
 

@@ -20,33 +20,38 @@ const getGroqAI = () => {
 
 /**
  * Executes a research inquiry. 
- * Uses Gemini with Search Grounding if available, otherwise falls back to Groq.
+ * Uses Gemini with Search Grounding and URL Context if available.
  */
-export async function askResearchQuestion(question: string, context: string) {
+export async function searchIntel(question: string, context: string, urls: string[] = []) {
   const gemini = getGeminiAI();
   
   if (gemini) {
     try {
+      const tools: any[] = [{ googleSearch: {} }];
+      if (urls.length > 0) {
+        tools.push({ urlContext: {} });
+      }
+
       const response: GenerateContentResponse = await gemini.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Context: ${context}\n\nInquiry: ${question}`,
+        contents: `NOTEBOOK ENTRIES (PRIMARY SOURCE):\n${context}\n\nUSER INQUIRY: ${question}${urls.length > 0 ? `\n\nFOCUS URLS:\n${urls.join('\n')}` : ''}`,
         config: {
-          systemInstruction: "You are a research assistant. Provide concise, factual answers based on web data. Cite sources.",
-          tools: [{ googleSearch: {} }],
+          systemInstruction: "You are a research assistant. You are grounded in the provided 'NOTEBOOK ENTRIES' and 'FOCUS URLS' (if provided). Use Google Search to supplement this data. Cite both notebook entries and web sources.",
+          tools,
         },
       });
 
-      const urls: string[] = [];
+      const foundUrls: string[] = [];
       const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
       if (chunks) {
         chunks.forEach((chunk: any) => {
-          if (chunk.web?.uri) urls.push(chunk.web.uri);
+          if (chunk.web?.uri) foundUrls.push(chunk.web.uri);
         });
       }
 
       return {
-        text: response.text || "No data synthesized.",
-        urls: Array.from(new Set(urls))
+        answer: response.text || "No data synthesized.",
+        urls: Array.from(new Set(foundUrls))
       };
     } catch (error: any) {
       console.error("Gemini Research Error:", error);
@@ -66,7 +71,7 @@ export async function askResearchQuestion(question: string, context: string) {
     });
 
     return {
-      text: chatCompletion.choices[0]?.message?.content || "No data synthesized.",
+      answer: chatCompletion.choices[0]?.message?.content || "No data synthesized.",
       urls: []
     };
   }
@@ -139,7 +144,7 @@ export async function generateProjectImage(prompt: string) {
 /**
  * Deconstructs raw text into structured atomic notes.
  */
-export async function shredWallOfText(text: string) {
+export async function shredText(text: string, context: string = "") {
   const gemini = getGeminiAI();
   const groq = getGroqAI();
 
@@ -147,7 +152,7 @@ export async function shredWallOfText(text: string) {
     try {
       const response = await gemini.models.generateContent({
         model: "gemini-3-pro-preview",
-        contents: `Convert this raw input into a JSON array of project tasks/insights:\n\n${text}`,
+        contents: `Convert this raw input into a JSON array of project tasks/insights. Use the existing context if helpful:\n\nCONTEXT:\n${context}\n\nRAW INPUT:\n${text}`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -190,4 +195,118 @@ export async function shredWallOfText(text: string) {
   }
 
   throw new Error("API_KEY_MISSING");
+}
+
+/**
+ * Fetches the title of a URL using Gemini's URL Context tool.
+ */
+export async function fetchUrlTitle(url: string) {
+  const gemini = getGeminiAI();
+  if (!gemini) throw new Error("API_KEY_MISSING");
+
+  try {
+    const response = await gemini.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `What is the title of the article at this URL: ${url}`,
+      config: {
+        systemInstruction: "You are a helpful assistant. Provide ONLY the main title of the article or page content at the provided URL. Do not include the website name unless it is part of the article title. No other text.",
+        tools: [{ urlContext: {} }]
+      }
+    });
+    return response.text?.trim() || url;
+  } catch (error) {
+    console.error("Failed to fetch URL title:", error);
+    return url;
+  }
+}
+
+/**
+ * Conversational interface grounded in the notebook context.
+ */
+export async function chatWithNotebook(message: string, context: string, history: { role: 'user' | 'model', text: string }[] = []) {
+  const gemini = getGeminiAI();
+  if (!gemini) throw new Error("API_KEY_MISSING");
+
+  const contents = [
+    { role: 'user', parts: [{ text: `NOTEBOOK CONTEXT:\n${context}` }] },
+    ...history.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
+    { role: 'user', parts: [{ text: message }] }
+  ];
+
+  const response = await gemini.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents,
+    config: {
+      systemInstruction: "You are a project assistant. You are grounded in the 'NOTEBOOK CONTEXT'. Answer questions about the project, suggest connections between notes, and help the user brainstorm. Be concise and professional.",
+    }
+  });
+
+  return response.text || "I couldn't process that request.";
+}
+
+/**
+ * Generates suggested questions based on the notebook context.
+ */
+export async function generateSuggestedQuestions(context: string) {
+  const gemini = getGeminiAI();
+  if (!gemini) return [];
+
+  try {
+    const response = await gemini.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Based on these project notes, what are 3 insightful questions a user might want to ask to explore the project further?\n\nNOTES:\n${context}`,
+      config: {
+        systemInstruction: "Provide ONLY a JSON array of 3 strings. No other text.",
+        responseMimeType: "application/json",
+      }
+    });
+    const text = response.text || "[]";
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Failed to generate questions:", error);
+    return [];
+  }
+}
+
+/**
+ * Generates a NotebookLM-style guide (Briefing Doc, FAQ, Study Guide).
+ */
+export async function generateNotebookGuide(context: string, type: 'briefing' | 'faq' | 'study_guide') {
+  const gemini = getGeminiAI();
+  if (!gemini) throw new Error("API_KEY_MISSING");
+
+  const prompts = {
+    briefing: "Create a comprehensive Briefing Document based on these notes. Summarize key themes, entities, and timelines.",
+    faq: "Create a Frequently Asked Questions (FAQ) document based on these notes. Anticipate what a stakeholder would ask.",
+    study_guide: "Create a Study Guide based on these notes. Identify core concepts, definitions, and key takeaways."
+  };
+
+  const response = await gemini.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: `${prompts[type]}\n\nNOTES:\n${context}`,
+    config: {
+      systemInstruction: "You are a professional analyst. Create a structured, high-quality document in Markdown.",
+    }
+  });
+
+  return response.text || "Generation failed.";
+}
+
+/**
+ * Summarizes a specific source URL.
+ */
+export async function summarizeSource(url: string) {
+  const gemini = getGeminiAI();
+  if (!gemini) throw new Error("API_KEY_MISSING");
+
+  const response = await gemini.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Summarize the content of this URL in 3-5 bullet points:\n\n${url}`,
+    config: {
+      systemInstruction: "You are a helpful assistant. Provide a concise summary of the provided URL.",
+      tools: [{ urlContext: {} }]
+    }
+  });
+
+  return response.text || "Summary failed.";
 }

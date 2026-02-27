@@ -1,5 +1,5 @@
 
-export type NoteType = 'ledger' | 'research' | 'outline' | 'raw';
+export type NoteType = 'ledger' | 'research' | 'outline' | 'raw' | 'source';
 
 export interface ProjectNote {
   id: string;
@@ -19,6 +19,9 @@ export interface ProjectNote {
     imageData?: string;
     canvasX?: number;
     canvasY?: number;
+    fileName?: string;
+    fileType?: string;
+    fileSize?: number;
   };
 }
 
@@ -34,4 +37,4 @@ export interface Notebook {
   };
 }
 
-export type AppView = 'ledger' | 'research' | 'raw' | 'shelf' | 'architect';
+export type AppView = 'ledger' | 'research' | 'raw' | 'shelf' | 'architect' | 'sources' | 'chat' | 'workspace';

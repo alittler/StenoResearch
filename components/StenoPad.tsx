@@ -1,236 +1,140 @@
-
-'use client';
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ProjectNote } from '../types';
+import Markdown from 'react-markdown';
+import { Plus, Search, Trash2, Clock, Tag, ChevronDown, ChevronUp, Book } from 'lucide-react';
 
 interface StenoPadProps {
   notes: ProjectNote[];
-  onAddNote: (content: string, type: 'ledger' | 'research', extra?: any) => void;
+  onAddNote: (content: string, type: ProjectNote['type'], extra?: Partial<ProjectNote>) => void;
   onUpdateNote: (id: string, updates: Partial<ProjectNote>) => void;
   onDeleteNote: (id: string) => void;
   isNotebook?: boolean;
-  allNotebookTitles: string[];
+  allNotebookTitles?: string[];
   searchQuery?: string;
 }
 
 const StenoPad: React.FC<StenoPadProps> = ({ 
   notes, 
   onAddNote, 
-  onUpdateNote,
-  onDeleteNote, 
-  isNotebook = false,
-  allNotebookTitles,
+  onUpdateNote, 
+  onDeleteNote,
   searchQuery = ''
 }) => {
-  const [newNote, setNewNote] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [autocompleteQuery, setAutocompleteQuery] = useState('');
-  const [autocompleteIndex, setAutocompleteIndex] = useState(0);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const editRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-    }
-  }, [newNote]);
-
-  useEffect(() => {
-    if (editRef.current && editingId) {
-      editRef.current.style.height = 'auto';
-      editRef.current.style.height = editRef.current.scrollHeight + 'px';
-      editRef.current.focus();
-    }
-  }, [editValue, editingId]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey && !showAutocomplete) {
-      e.preventDefault();
-      if (newNote.trim()) {
-        onAddNote(newNote.trim(), 'ledger');
-        setNewNote('');
-      }
-      return;
-    }
-
-    if (showAutocomplete) {
-      const filtered = allNotebookTitles.filter(t => t.toLowerCase().includes(autocompleteQuery.toLowerCase()));
-      
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setAutocompleteIndex(prev => (prev + 1) % (filtered.length || 1));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setAutocompleteIndex(prev => (prev - 1 + (filtered.length || 1)) % (filtered.length || 1));
-      } else if ((e.key === 'Enter' || e.key === 'Tab') && filtered.length > 0) {
-        e.preventDefault();
-        const before = newNote.substring(0, newNote.lastIndexOf('#'));
-        setNewNote(before + '#' + filtered[autocompleteIndex] + ' ');
-        setShowAutocomplete(false);
-      } else if (e.key === 'Escape') {
-        setShowAutocomplete(false);
-      }
-    }
-  };
-
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setNewNote(value);
-
-    const cursorPosition = e.target.selectionStart;
-    const textBeforeCursor = value.substring(0, cursorPosition);
-    const lastHashIndex = textBeforeCursor.lastIndexOf('#');
-
-    if (lastHashIndex !== -1) {
-      const query = textBeforeCursor.substring(lastHashIndex + 1);
-      // Only show if there's no space between # and cursor
-      if (!query.includes(' ')) {
-        setShowAutocomplete(true);
-        setAutocompleteQuery(query);
-        setAutocompleteIndex(0);
-      } else {
-        setShowAutocomplete(false);
-      }
-    } else {
-      setShowAutocomplete(false);
-    }
-  };
-
-  const filteredTitles = allNotebookTitles.filter(t => 
-    t.toLowerCase().includes(autocompleteQuery.toLowerCase())
-  );
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [isExpanded, setIsExpanded] = useState<Record<string, boolean>>({});
 
   const filteredNotes = notes.filter(n => 
     n.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (n.type && n.type.toLowerCase().includes(searchQuery.toLowerCase()))
+    (n.title && n.title.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  return (
-    <div className="flex-1 relative p-10 md:p-20 pt-3">
-      <div className="pl-0 sm:pl-10 md:pl-20 space-y-12">
-        
-        {/* Entry System */}
-        <div className="space-y-3 relative">
-          {!isNotebook && (
-            <div className="flex justify-between items-center mb-2">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">New Entry</div>
-            </div>
-          )}
-          <div className="relative group">
-            <textarea
-              ref={textareaRef}
-              value={newNote}
-              onChange={handleTextareaChange}
-              onKeyDown={handleKeyDown}
-              placeholder={isNotebook ? "Write something..." : "Quick entry..."}
-              className="w-full bg-transparent border-none focus:ring-0 text-xl md:text-2xl font-medium text-stone-800 placeholder-stone-300 resize-none min-h-[100px] leading-relaxed"
-              rows={3}
-            />
-            
-            {/* Autocomplete UI */}
-            {showAutocomplete && (
-              <div className="absolute left-0 top-full mt-2 w-64 bg-white border border-stone-200 rounded-xl shadow-2xl z-50 overflow-hidden">
-                <div className="p-2 bg-stone-50 border-b border-stone-100 text-[9px] font-black uppercase tracking-widest text-stone-400 flex justify-between items-center">
-                  <span>Link to Notebook</span>
-                  {filteredTitles.length > 0 && (
-                    <span className="text-[8px] opacity-50">Enter to select</span>
-                  )}
-                </div>
-                {filteredTitles.length > 0 ? (
-                  filteredTitles.map((title, i) => (
-                    <button
-                      key={title}
-                      onClick={() => {
-                        const before = newNote.substring(0, newNote.lastIndexOf('#'));
-                        setNewNote(before + '#' + title + ' ');
-                        setShowAutocomplete(false);
-                        textareaRef.current?.focus();
-                      }}
-                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-stone-50 transition-colors flex items-center gap-3 ${i === autocompleteIndex ? 'bg-stone-100' : ''}`}
-                    >
-                      <span className={`w-2 h-2 rounded-full ${i === autocompleteIndex ? 'bg-blue-400' : 'bg-stone-300'}`}></span>
-                      <span className="font-medium text-stone-700">{title}</span>
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-4 py-3 text-xs text-stone-400 italic">No matching notebooks</div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNoteContent.trim()) return;
+    onAddNote(newNoteContent, 'ledger');
+    setNewNoteContent('');
+  };
 
-        {/* Notes List */}
-        <div className="space-y-16 pb-20">
-          {filteredNotes.map((note) => (
-            <div key={note.id} className="group relative">
-              <div className="flex items-start gap-6">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-stone-400">
-                    <div className={`w-2 h-2 rounded-full ${
-                      note.type === 'ledger' ? 'bg-red-500' :
-                      note.type === 'research' ? 'bg-blue-500' :
-                      note.type === 'outline' ? 'bg-green-500' :
-                      note.type === 'raw' ? 'bg-purple-500' : 'bg-stone-300'
-                    }`}></div>
-                    <span>{new Date(note.timestamp).toLocaleDateString()}</span>
-                    <span className="w-1 h-1 rounded-full bg-stone-200"></span>
-                    <span>{note.type}</span>
-                  </div>
-                  
-                  {editingId === note.id ? (
-                    <textarea
-                      ref={editRef}
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={() => {
-                        onUpdateNote(note.id, { content: editValue });
-                        setEditingId(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          onUpdateNote(note.id, { content: editValue });
-                          setEditingId(null);
-                        } else if (e.key === 'Escape') {
-                          setEditingId(null);
-                        }
-                      }}
-                      className="w-full bg-stone-50 border-none focus:ring-0 text-lg md:text-xl text-stone-700 leading-relaxed whitespace-pre-wrap rounded-lg p-2 -ml-2"
-                    />
-                  ) : (
-                    <div 
-                      onClick={() => {
-                        setEditingId(note.id);
-                        setEditValue(note.content);
-                      }}
-                      className="text-lg md:text-xl text-stone-700 leading-relaxed whitespace-pre-wrap cursor-pointer hover:bg-stone-50/50 transition-colors rounded-lg p-2 -ml-2"
-                    >
-                      {note.content}
-                    </div>
-                  )}
+  const toggleExpand = (id: string) => {
+    setIsExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8 pb-20">
+      {/* The "Torn Paper" Header Effect */}
+      <div className="relative h-12 mb-[-1rem] z-10 pointer-events-none">
+        <div className="torn-paper-stack">
+          <div className="torn-paper-shadow-container layer-3"><div className="torn-paper-edge"></div></div>
+          <div className="torn-paper-shadow-container layer-2"><div className="torn-paper-edge"></div></div>
+          <div className="torn-paper-shadow-container layer-1"><div className="torn-paper-edge"></div></div>
+        </div>
+      </div>
+
+      {/* Input Area */}
+      <div className="paper-texture shadow-xl border border-stone-200 rounded-b-lg p-8 pt-12 relative">
+        <form onSubmit={handleAdd} className="space-y-4">
+          <textarea
+            value={newNoteContent}
+            onChange={(e) => setNewNoteContent(e.target.value)}
+            placeholder="Log an observation, thought, or finding..."
+            className="w-full bg-transparent border-none outline-none resize-none prose-steno placeholder:text-stone-300 min-h-[120px]"
+          />
+          <div className="flex justify-end">
+            <button 
+              type="submit"
+              disabled={!newNoteContent.trim()}
+              className="bg-stone-900 text-white px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest hover:bg-stone-800 transition-all disabled:opacity-20 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Commit to Ledger
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Notes List */}
+      <div className="space-y-6">
+        {filteredNotes.map((note) => (
+          <div 
+            key={note.id} 
+            className="paper-texture shadow-md border border-stone-200 rounded-lg p-8 relative group animate-fade-in"
+          >
+            <div className="flex items-center justify-between mb-6 border-b border-stone-200 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-stone-400" />
                 </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+                    {new Date(note.timestamp).toLocaleDateString()}
+                  </span>
+                  <span className="text-[10px] font-bold text-stone-500">
+                    {new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+              {note.title && (
+                <div className="flex-1 px-4">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                    {note.type === 'source' ? 'Source: ' : ''}{note.title}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                 <button 
                   onClick={() => onDeleteNote(note.id)}
-                  className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-50 rounded-lg text-red-400 transition-all"
+                  className="p-2 hover:bg-red-50 text-stone-300 hover:text-red-500 rounded-lg transition-all"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
-          ))}
-          {filteredNotes.length === 0 && searchQuery && (
-            <div className="text-center py-20 text-stone-400 italic">
-              No notes found matching "{searchQuery}"
+
+            <div className={`prose-steno ${!isExpanded[note.id] ? 'line-clamp-6' : ''}`}>
+              <Markdown>{note.content}</Markdown>
             </div>
-          )}
-        </div>
+
+            {note.content.length > 300 && (
+              <button 
+                onClick={() => toggleExpand(note.id)}
+                className="mt-4 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-stone-400 hover:text-stone-600 transition-all"
+              >
+                {isExpanded[note.id] ? (
+                  <>Collapse <ChevronUp className="w-3 h-3" /></>
+                ) : (
+                  <>Read Full Entry <ChevronDown className="w-3 h-3" /></>
+                )}
+              </button>
+            )}
+          </div>
+        ))}
+
+        {filteredNotes.length === 0 && (
+          <div className="py-20 text-center space-y-4 opacity-20">
+            <Book className="w-16 h-16 mx-auto" />
+            <p className="text-xl font-bold italic font-serif">The ledger is empty...</p>
+          </div>
+        )}
       </div>
     </div>
   );

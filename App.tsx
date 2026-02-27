@@ -10,7 +10,9 @@ import ResearchHub from './components/ResearchHub';
 import RawTextEditor from './components/RawTextEditor';
 import NotebookShelf from './components/NotebookShelf';
 import KnowledgeArchitect from './components/KnowledgeArchitect';
-import NotepadContainer from './components/NotepadContainer';
+import SourcesView from './components/SourcesView';
+import ChatView from './components/ChatView';
+import WorkspaceView from './components/WorkspaceView';
 import { generateSHA256 } from './utils/crypto';
 
 const STORAGE_KEY = 'steno_ledger_core_v2';
@@ -25,13 +27,14 @@ function AppContent() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [versionHash, setVersionHash] = useState<string>('INIT');
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingArchitectContent, setPendingArchitectContent] = useState<string>('');
 
   const navigate = useNavigate();
   const { notebookId, view } = useParams<{ notebookId?: string; view?: string }>();
   const location = useLocation();
 
   const activeNotebookId = notebookId || 'general';
-  const currentView = (view as AppView) || 'ledger';
+  const currentView = (view as AppView) || (notebookId === 'general' ? 'ledger' : 'workspace');
 
   const lastStateString = useRef<string>('');
 
@@ -109,27 +112,29 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc] text-[#1e293b]">
+      {!isShelf && (
+        <Navigation 
+          activeView={currentView}
+          onViewChange={(v) => navigate(`/notebook/${activeNotebookId}/${v}`)}
+          activeNotebookTitle={activeNotebook?.title}
+          onBackToShelf={() => navigate('/')}
+          hideTabs={false}
+        />
+      )}
       <main className="flex-1 w-full overflow-y-auto relative">
-        <div className={`mx-auto w-full h-full relative ${isShelf ? '' : 'max-w-[1400px] px-4 lg:px-32 py-8 pb-32'}`}>
+        <div className={`mx-auto w-full h-full relative ${isShelf ? '' : 'max-w-[1600px] px-4 py-4'}`}>
           {!isShelf && (
-            <NotepadContainer 
-              title={activeNotebook?.title}
-              onBackToShelf={() => navigate('/')}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              navigation={
-                <Navigation 
-                  activeView={currentView}
-                  onViewChange={(v) => navigate(`/notebook/${activeNotebookId}/${v}`)}
-                  activeNotebookTitle={activeNotebook?.title}
-                  onBackToShelf={() => navigate('/')}
-                  hideTabs={activeNotebookId === 'general'}
+            <div className="h-full">
+              {currentView === 'workspace' ? (
+                <WorkspaceView 
+                  notebookId={activeNotebookId}
+                  notes={activeNotes}
+                  onAddNote={addNote}
+                  onUpdateNote={updateNote}
                 />
-              }
-            >
-              {currentView === 'ledger' ? (
+              ) : currentView === 'ledger' ? (
                 <StenoPad 
-                  notes={activeNotes.filter(n => n.type === 'ledger' || n.type === 'research')}
+                  notes={activeNotes.filter(n => n.type === 'ledger' || n.type === 'research' || n.type === 'source')}
                   onAddNote={(c, type, extra) => addNote(c, type, extra)}
                   onUpdateNote={updateNote}
                   onDeleteNote={deleteNote}
@@ -140,32 +145,54 @@ function AppContent() {
               ) : currentView === 'research' ? (
                 <ResearchHub 
                   notes={activeNotes.filter(n => n.type === 'research')}
-                  context={activeNotes.slice(0, 10).map(n => n.content).join('\n')}
+                  context={activeNotes.filter(n => n.type === 'ledger' || n.type === 'source').map(n => n.content).join('\n---\n')}
                   onAddResearch={(q, a, u) => addNote(a, 'research', { question: q, metadata: { urls: u } })}
-                  onPin={(note) => addNote(note.content, 'ledger')}
+                  onPin={(note) => addNote(note.content, 'ledger', { title: note.question, metadata: note.metadata })}
+                  onSendToArchitect={(content) => {
+                    setPendingArchitectContent(content);
+                    navigate(`/notebook/${activeNotebookId}/architect`);
+                  }}
                   onDelete={deleteNote}
                 />
               ) : currentView === 'architect' ? (
                 <KnowledgeArchitect 
+                  initialText={pendingArchitectContent}
+                  context={activeNotes.filter(n => n.type === 'ledger' || n.type === 'source').map(n => n.content).join('\n---\n')}
                   onShredded={(staged) => {
-                    const committed = staged.map(s => ({ ...s, notebookId: activeNotebookId! }));
+                    const committed: ProjectNote[] = staged.map(s => ({
+                      id: crypto.randomUUID(),
+                      content: s.content || '',
+                      timestamp: Date.now(),
+                      type: 'ledger',
+                      notebookId: activeNotebookId!,
+                      title: s.title,
+                      metadata: s.metadata
+                    }));
                     setNotes(prev => [...committed, ...prev]);
+                    setPendingArchitectContent('');
                   }}
-                  onAddRawNote={(content) => addNote(content, 'raw')}
+                  onAddRawNote={(content) => {
+                    addNote(content, 'raw');
+                    setPendingArchitectContent('');
+                  }}
                 />
               ) : currentView === 'raw' ? (
                 <RawTextEditor 
                   allNotes={activeNotes}
                   notebookTitle={activeNotebook?.title || 'Ledger'}
                 />
+              ) : currentView === 'sources' ? (
+                <SourcesView notes={activeNotes} onAddNote={addNote} />
+              ) : currentView === 'chat' ? (
+                <ChatView context={activeNotes.filter(n => n.type === 'ledger' || n.type === 'source').map(n => n.content).join('\n---\n')} />
               ) : null}
-            </NotepadContainer>
+            </div>
           )}
           {isShelf && (
             <NotebookShelf 
               notebooks={notebooks}
               notes={notes}
-              onSelect={(id) => navigate(`/notebook/${id}/ledger`)}
+              onSelect={(id) => navigate(`/notebook/${id}/${id === 'general' ? 'ledger' : 'workspace'}`)}
               onAdd={(t, c) => setNotebooks([...notebooks, { id: crypto.randomUUID(), title: t, color: c, createdAt: Date.now(), coreConcept: '' }])}
               onDelete={(id) => setNotebooks(notebooks.filter(n => n.id !== id))}
               hasUnsavedChanges={false}
@@ -175,13 +202,6 @@ function AppContent() {
           )}
         </div>
       </main>
-
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 pointer-events-none z-50">
-        <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest flex items-center gap-2">
-          <span className="opacity-50">State ID:</span> 
-          <span className="font-bold">{versionHash}</span>
-        </div>
-      </div>
     </div>
   );
 }

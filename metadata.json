@@ -1,5 +1,5 @@
 {
   "name": "Project Ledger",
-  "description": "Nostalgic, high-precision project research and management ledger.",
+  "description": "A research and writing partner that emulates NotebookLM features with source grounding and a locked general ledger.",
   "requestFramePermissions": []
 }
