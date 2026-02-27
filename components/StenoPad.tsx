@@ -11,6 +11,7 @@ interface StenoPadProps {
   isNotebook?: boolean;
   allNotebookTitles?: string[];
   searchQuery?: string;
+  noteType?: ProjectNote['type'];
 }
 
 const StenoPad: React.FC<StenoPadProps> = ({ 
@@ -18,7 +19,8 @@ const StenoPad: React.FC<StenoPadProps> = ({
   onAddNote, 
   onUpdateNote, 
   onDeleteNote,
-  searchQuery = ''
+  searchQuery = '',
+  noteType = 'ledger'
 }) => {
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isExpanded, setIsExpanded] = useState<Record<string, boolean>>({});
@@ -31,8 +33,15 @@ const StenoPad: React.FC<StenoPadProps> = ({
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNoteContent.trim()) return;
-    onAddNote(newNoteContent, 'ledger');
+    onAddNote(newNoteContent, noteType);
     setNewNoteContent('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAdd(e as unknown as React.FormEvent);
+    }
   };
 
   const toggleExpand = (id: string) => {
@@ -56,6 +65,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
           <textarea
             value={newNoteContent}
             onChange={(e) => setNewNoteContent(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Log an observation, thought, or finding..."
             className="w-full bg-transparent border-none outline-none resize-none prose-steno placeholder:text-stone-300 min-h-[120px]"
           />

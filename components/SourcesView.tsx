@@ -16,15 +16,16 @@ const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const sources = notes.filter(n => n.type === 'ledger' || n.type === 'research' || n.type === 'source');
+  const sources = notes.filter(n => n.type === 'ledger' || n.type === 'research' || n.type === 'source' || (n.type === 'raw' && n.metadata?.fileType === 'application/pdf'));
 
   const handleFile = async (file: File) => {
     setIsUploading(true);
     try {
       let content = '';
       const fileType = file.type;
+      const isPdf = fileType === 'application/pdf';
 
-      if (fileType === 'application/pdf') {
+      if (isPdf) {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
         let fullText = '';
@@ -41,7 +42,7 @@ const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote }) => {
         content = `Binary file: ${file.name} (${file.size} bytes)`;
       }
 
-      onAddNote(content, 'source', {
+      onAddNote(content, isPdf ? 'raw' : 'source', {
         title: file.name,
         metadata: {
           fileName: file.name,

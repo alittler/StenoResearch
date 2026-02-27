@@ -82,7 +82,7 @@ const NotebookLMView: React.FC<NotebookLMViewProps> = ({
         )}
 
         <div className="flex-1 overflow-y-auto no-scrollbar bg-slate-50/50">
-          <SourcesView notes={notes} />
+          <SourcesView notes={notes} onAddNote={onAddNote} />
         </div>
       </div>
 

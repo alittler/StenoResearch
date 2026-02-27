@@ -131,6 +131,7 @@ function AppContent() {
                   notes={activeNotes}
                   onAddNote={addNote}
                   onUpdateNote={updateNote}
+                  onDeleteNote={deleteNote}
                 />
               ) : currentView === 'ledger' ? (
                 <StenoPad 
