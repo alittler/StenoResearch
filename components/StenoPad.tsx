@@ -68,7 +68,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-20">
+    <div className="max-w-4xl mx-auto pb-20">
       {/* The "Torn Paper" Header Effect */}
       <div className="relative h-12 mb-[-1rem] z-10 pointer-events-none">
         <div className="torn-paper-stack">
@@ -78,37 +78,38 @@ const StenoPad: React.FC<StenoPadProps> = ({
         </div>
       </div>
 
-      {/* Input Area */}
-      <div className="paper-texture shadow-xl border border-stone-200 rounded-b-lg p-8 pt-12 relative">
-        <form onSubmit={handleAdd} className="space-y-4">
-          <textarea
-            value={newNoteContent}
-            onChange={(e) => setNewNoteContent(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Log an observation, thought, or finding..."
-            className="w-full bg-transparent border-none outline-none resize-none prose-steno placeholder:text-stone-300 min-h-[120px]"
-          />
-          <div className="flex justify-end">
-            <button 
-              type="submit"
-              disabled={!newNoteContent.trim()}
-              className="bg-stone-900 text-white px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest hover:bg-stone-800 transition-all disabled:opacity-20 flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Commit to Ledger
-            </button>
-          </div>
-        </form>
-      </div>
+      <div className="paper-texture shadow-xl border border-stone-200 rounded-b-lg min-h-screen relative flex flex-col">
+        {/* Input Area */}
+        <div className="p-8 pt-12 relative border-b-2 border-stone-200/50">
+          <form onSubmit={handleAdd} className="space-y-4">
+            <textarea
+              value={newNoteContent}
+              onChange={(e) => setNewNoteContent(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Log an observation, thought, or finding..."
+              className="w-full bg-transparent border-none outline-none resize-none prose-steno placeholder:text-stone-400 min-h-[120px]"
+            />
+            <div className="flex justify-end">
+              <button 
+                type="submit"
+                disabled={!newNoteContent.trim()}
+                className="bg-stone-900 text-white px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest hover:bg-stone-800 transition-all disabled:opacity-20 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Commit to Ledger
+              </button>
+            </div>
+          </form>
+        </div>
 
-      {/* Notes List */}
-      <div className="space-y-6">
-        {filteredNotes.map((note) => (
-          <div 
-            key={note.id} 
-            className="paper-texture shadow-md border border-stone-200 rounded-lg p-8 relative group animate-fade-in"
-          >
-            <div className="flex items-center justify-between mb-6 border-b border-stone-200 pb-4">
+        {/* Notes List */}
+        <div className="flex flex-col">
+          {filteredNotes.map((note) => (
+            <div 
+              key={note.id} 
+              className="p-8 relative group animate-fade-in border-b-2 border-stone-200/50 last:border-b-0"
+            >
+              <div className="flex items-center justify-between mb-6 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center">
                   <Clock className="w-4 h-4 text-stone-400" />
@@ -209,6 +210,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
             <p className="text-xl font-bold italic font-serif">The ledger is empty...</p>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

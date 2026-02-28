@@ -33,8 +33,29 @@ function AppContent() {
   const { notebookId, view } = useParams<{ notebookId?: string; view?: string }>();
   const location = useLocation();
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const activeNotebookId = notebookId || 'general';
-  const currentView = (view as AppView) || (notebookId === 'general' ? 'ledger' : 'workspace');
+  
+  // Default to ledger on mobile if no view is specified, otherwise workspace
+  let defaultView: AppView = 'workspace';
+  if (notebookId === 'general') defaultView = 'ledger';
+  else if (isMobile) defaultView = 'ledger';
+
+  const currentView = (view as AppView) || defaultView;
+
+  useEffect(() => {
+    if (isMobile && (view === 'workspace' || view === 'architect' || view === 'raw')) {
+      navigate(`/notebook/${activeNotebookId}/ledger`, { replace: true });
+    }
+  }, [isMobile, view, activeNotebookId, navigate]);
 
   const lastStateString = useRef<string>('');
 
@@ -119,9 +140,10 @@ function AppContent() {
           activeNotebookTitle={activeNotebook?.title}
           onBackToShelf={() => navigate('/')}
           hideTabs={false}
+          isMobile={isMobile}
         />
       )}
-      <main className="flex-1 w-full overflow-y-auto relative">
+      <main className="flex-1 w-full overflow-y-auto relative pb-28 md:pb-0">
         <div className={`mx-auto w-full h-full relative ${isShelf ? '' : 'max-w-[1600px] px-4 py-4'}`}>
           {!isShelf && (
             <div className="h-full">
