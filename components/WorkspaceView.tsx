@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ProjectNote } from '../types';
 import { chatWithNotebook } from '../services/geminiService';
 import Markdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import StenoPad from './StenoPad';
 import { Pin, Send, Sparkles, BookOpen, FileText, MessageSquare, PenTool } from 'lucide-react';
 
@@ -117,7 +118,7 @@ const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                       msg.role === 'user' ? 'bg-stone-900 text-white rounded-tr-none' : 'bg-stone-50 text-stone-800 rounded-tl-none border border-stone-100'
                     }`}>
                       <div className="markdown-body">
-                        <Markdown>{msg.text}</Markdown>
+                        <Markdown rehypePlugins={[rehypeRaw]}>{msg.text}</Markdown>
                       </div>
                     </div>
                     {msg.role === 'model' && (

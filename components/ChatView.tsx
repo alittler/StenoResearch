@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { chatWithNotebook } from '../services/geminiService';
 import { Send, Sparkles, User, Bot } from 'lucide-react';
 import Markdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 
 interface ChatViewProps {
   context: string;
@@ -60,7 +61,7 @@ const ChatView: React.FC<ChatViewProps> = ({ context }) => {
             </div>
             <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${msg.role === 'user' ? 'bg-stone-100 text-stone-800 rounded-tr-none' : 'bg-blue-50 text-stone-800 rounded-tl-none'}`}>
               <div className="markdown-body">
-                <Markdown>{msg.text}</Markdown>
+                <Markdown rehypePlugins={[rehypeRaw]}>{msg.text}</Markdown>
               </div>
             </div>
           </div>

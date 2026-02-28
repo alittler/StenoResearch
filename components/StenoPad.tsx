@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ProjectNote } from '../types';
 import Markdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import { Plus, Search, Trash2, Clock, Tag, ChevronDown, ChevronUp, Book } from 'lucide-react';
 
 interface StenoPadProps {
@@ -121,7 +122,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
             </div>
 
             <div className={`prose-steno ${!isExpanded[note.id] ? 'line-clamp-6' : ''}`}>
-              <Markdown>{note.content}</Markdown>
+              <Markdown rehypePlugins={[rehypeRaw]}>{note.content}</Markdown>
             </div>
 
             {note.content.length > 300 && (
