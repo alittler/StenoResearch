@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { ProjectNote } from '../types';
 import Markdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
-import { Plus, Search, Trash2, Clock, Tag, ChevronDown, ChevronUp, Book } from 'lucide-react';
+import remarkGfm from 'remark-gfm';
+import { Plus, Search, Trash2, Clock, Tag, ChevronDown, ChevronUp, Book, Edit2, Check, X } from 'lucide-react';
 
 interface StenoPadProps {
   notes: ProjectNote[];
@@ -25,6 +26,8 @@ const StenoPad: React.FC<StenoPadProps> = ({
 }) => {
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isExpanded, setIsExpanded] = useState<Record<string, boolean>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
 
   const filteredNotes = notes.filter(n => 
     n.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -47,6 +50,21 @@ const StenoPad: React.FC<StenoPadProps> = ({
 
   const toggleExpand = (id: string) => {
     setIsExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const startEditing = (note: ProjectNote) => {
+    setEditingId(note.id);
+    setEditContent(note.content);
+  };
+
+  const saveEdit = (id: string) => {
+    onUpdateNote(id, { content: editContent });
+    setEditingId(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditContent('');
   };
 
   return (
@@ -112,30 +130,75 @@ const StenoPad: React.FC<StenoPadProps> = ({
                 </div>
               )}
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                <button 
-                  onClick={() => onDeleteNote(note.id)}
-                  className="p-2 hover:bg-red-50 text-stone-300 hover:text-red-500 rounded-lg transition-all"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {editingId === note.id ? (
+                  <>
+                    <button 
+                      onClick={() => saveEdit(note.id)}
+                      className="p-2 hover:bg-emerald-50 text-emerald-500 rounded-lg transition-all"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={cancelEdit}
+                      className="p-2 hover:bg-stone-100 text-stone-400 rounded-lg transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => startEditing(note)}
+                      className="p-2 hover:bg-blue-50 text-stone-300 hover:text-blue-500 rounded-lg transition-all"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => onDeleteNote(note.id)}
+                      className="p-2 hover:bg-red-50 text-stone-300 hover:text-red-500 rounded-lg transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className={`prose-steno ${!isExpanded[note.id] ? 'line-clamp-6' : ''}`}>
-              <Markdown rehypePlugins={[rehypeRaw]}>{note.content}</Markdown>
-            </div>
+            {editingId === note.id ? (
+              <div className="space-y-4">
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full bg-white border border-stone-200 rounded-lg p-4 outline-none resize-none prose-steno min-h-[120px] focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            ) : (
+              <>
+                <div className={`prose-steno ${!isExpanded[note.id] ? 'line-clamp-6' : ''}`}>
+                  <Markdown 
+                    rehypePlugins={[rehypeRaw]} 
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline" />
+                    }}
+                  >
+                    {note.content}
+                  </Markdown>
+                </div>
 
-            {note.content.length > 300 && (
-              <button 
-                onClick={() => toggleExpand(note.id)}
-                className="mt-4 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-stone-400 hover:text-stone-600 transition-all"
-              >
-                {isExpanded[note.id] ? (
-                  <>Collapse <ChevronUp className="w-3 h-3" /></>
-                ) : (
-                  <>Read Full Entry <ChevronDown className="w-3 h-3" /></>
+                {note.content.length > 300 && (
+                  <button 
+                    onClick={() => toggleExpand(note.id)}
+                    className="mt-4 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-stone-400 hover:text-stone-600 transition-all"
+                  >
+                    {isExpanded[note.id] ? (
+                      <>Collapse <ChevronUp className="w-3 h-3" /></>
+                    ) : (
+                      <>Read Full Entry <ChevronDown className="w-3 h-3" /></>
+                    )}
+                  </button>
                 )}
-              </button>
+              </>
             )}
           </div>
         ))}

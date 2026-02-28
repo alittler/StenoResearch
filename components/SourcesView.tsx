@@ -11,14 +11,15 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 interface SourcesViewProps {
   notes: ProjectNote[];
   onAddNote: (content: string, type: ProjectNote['type'], extra?: Partial<ProjectNote>) => void;
+  compact?: boolean;
 }
 
-const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote }) => {
+const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote, compact }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const sources = notes.filter(n => n.type === 'ledger' || n.type === 'research' || n.type === 'source' || (n.type === 'raw' && n.metadata?.fileType === 'application/pdf'));
+  const sources = notes.filter(n => n.type === 'ledger' || n.type === 'research' || n.type === 'source' || (n.type === 'raw' && (n.metadata?.fileType === 'application/pdf' || n.metadata?.fileType?.startsWith('image/'))));
 
   const handleFile = async (file: File) => {
     setIsUploading(true);
@@ -26,6 +27,7 @@ const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote }) => {
       let content = '';
       const fileType = file.type;
       const isPdf = fileType === 'application/pdf';
+      const isImage = fileType.startsWith('image/');
 
       if (isPdf) {
         const arrayBuffer = await file.arrayBuffer();
@@ -38,13 +40,21 @@ const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote }) => {
           fullText += pageText + '\n';
         }
         content = fullText;
+      } else if (isImage) {
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        content = `![${file.name}](${dataUrl})`;
       } else if (fileType.startsWith('text/') || file.name.endsWith('.md')) {
         content = await file.text();
       } else {
         content = `Binary file: ${file.name} (${file.size} bytes)`;
       }
 
-      onAddNote(content, isPdf ? 'raw' : 'source', {
+      onAddNote(content, (isPdf || isImage) ? 'raw' : 'source', {
         title: file.name,
         metadata: {
           fileName: file.name,
@@ -68,18 +78,43 @@ const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote }) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-20">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-black uppercase tracking-tighter">Source Directory</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">{sources.length} Total Sources</span>
+    <div className={compact ? "space-y-4" : "max-w-6xl mx-auto space-y-8 pb-20"}>
+      {!compact ? (
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-black uppercase tracking-tighter">Source Directory</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">{sources.length} Total Sources</span>
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-all disabled:opacity-50"
+            >
+              {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+              Upload File
+            </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                files.forEach(handleFile);
+              }}
+              multiple
+              accept="image/*,application/pdf,text/*,.md"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{sources.length} Sources</span>
           <button 
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-all disabled:opacity-50"
+            className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-stone-500 hover:text-stone-800 transition-all disabled:opacity-50"
           >
             {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-            Upload File
+            Upload
           </button>
           <input 
             type="file" 
@@ -90,9 +125,10 @@ const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote }) => {
               files.forEach(handleFile);
             }}
             multiple
+            accept="image/*,application/pdf,text/*,.md"
           />
         </div>
-      </div>
+      )}
 
       {/* Dropzone */}
       <div 
@@ -100,19 +136,20 @@ const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote }) => {
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
         className={`
-          border-2 border-dashed rounded-3xl p-12 flex flex-col items-center justify-center transition-all
+          border-2 border-dashed flex flex-col items-center justify-center transition-all
+          ${compact ? 'p-6 rounded-2xl' : 'p-12 rounded-3xl'}
           ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-stone-200 bg-white'}
           ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
       >
-        <div className="w-16 h-16 rounded-2xl bg-stone-50 flex items-center justify-center mb-4">
-          <Upload className={`w-8 h-8 ${isDragging ? 'text-blue-500' : 'text-stone-400'}`} />
+        <div className={`${compact ? 'w-10 h-10 mb-2' : 'w-16 h-16 mb-4'} rounded-2xl bg-stone-50 flex items-center justify-center`}>
+          <Upload className={`${compact ? 'w-5 h-5' : 'w-8 h-8'} ${isDragging ? 'text-blue-500' : 'text-stone-400'}`} />
         </div>
-        <h3 className="text-sm font-bold text-stone-800">Drag & Drop Sources</h3>
-        <p className="text-xs text-stone-500 mt-1">PDF, Markdown, or Text files</p>
+        <h3 className={`${compact ? 'text-xs' : 'text-sm'} font-bold text-stone-800`}>Drag & Drop</h3>
+        {!compact && <p className="text-xs text-stone-500 mt-1">PDF, Images, Markdown, or Text files</p>}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className={`grid ${compact ? 'grid-cols-1 gap-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'}`}>
         {sources.map((source) => (
           <div key={source.id} className="bg-white border border-stone-200 rounded-2xl p-6 hover:shadow-md transition-all space-y-4">
             <div className="flex items-start justify-between">

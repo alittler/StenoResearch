@@ -6,6 +6,7 @@ import { chatWithNotebook } from '../services/geminiService';
 import { Search, Sparkles, Pin, Link as LinkIcon, Loader2, BookOpen, Scissors, Trash2 } from 'lucide-react';
 import Markdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
 
 interface ResearchHubProps {
   notes: any[];
@@ -111,7 +112,15 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
             </div>
             
             <div className="prose-steno">
-              <Markdown rehypePlugins={[rehypeRaw]}>{note.content}</Markdown>
+              <Markdown 
+                rehypePlugins={[rehypeRaw]}
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline" />
+                }}
+              >
+                {note.content}
+              </Markdown>
             </div>
 
             {note.metadata?.urls && note.metadata.urls.length > 0 && (
