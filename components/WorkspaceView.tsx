@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ProjectNote } from '../types';
+import { ProjectNote, Notebook } from '../types';
 import { chatWithNotebook } from '../services/geminiService';
 import Markdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -11,17 +11,21 @@ import { Pin, Send, Sparkles, BookOpen, FileText, MessageSquare, PenTool } from 
 interface WorkspaceViewProps {
   notebookId: string;
   notes: ProjectNote[];
+  notebooks: Notebook[];
   onAddNote: (content: string, type: ProjectNote['type'], extra?: Partial<ProjectNote>) => void;
   onUpdateNote: (id: string, updates: Partial<ProjectNote>) => void;
   onDeleteNote: (id: string) => void;
+  onNavigateToNotebook?: (id: string) => void;
 }
 
 const WorkspaceView: React.FC<WorkspaceViewProps> = ({ 
   notebookId, 
   notes, 
+  notebooks,
   onAddNote,
   onUpdateNote,
-  onDeleteNote
+  onDeleteNote,
+  onNavigateToNotebook
 }) => {
   const [activeTab, setActiveTab] = useState<'assistant' | 'notepad'>('assistant');
   const [chatMessages, setChatMessages] = useState<{role: 'user' | 'model', text: string}[]>([]);
@@ -184,6 +188,8 @@ const WorkspaceView: React.FC<WorkspaceViewProps> = ({
             onUpdateNote={onUpdateNote}
             onDeleteNote={onDeleteNote}
             noteType="raw"
+            notebooks={notebooks}
+            onNavigateToNotebook={onNavigateToNotebook}
           />
         </div>
       </div>

@@ -101,10 +101,19 @@ function AppContent() {
     [notebooks, activeNotebookId]
   );
 
-  const activeNotes = useMemo(() => 
-    notes.filter(n => n.notebookId === activeNotebookId), 
-    [notes, activeNotebookId]
-  );
+  const activeNotes = useMemo(() => {
+    if (!activeNotebook) return [];
+    
+    // If we're in a specific notebook, show notes belonging to it 
+    // OR notes tagged with its title (formatted as a tag)
+    const notebookTag = `#${activeNotebook.title.replace(/\s+/g, '_')}`;
+    
+    return notes.filter(n => {
+      const isDirectlyInNotebook = n.notebookId === activeNotebookId;
+      const isTaggedForThisNotebook = activeNotebookId !== 'general' && n.content.includes(notebookTag);
+      return isDirectlyInNotebook || isTaggedForThisNotebook;
+    });
+  }, [notes, activeNotebookId, activeNotebook]);
 
   const addNote = (content: string, type: ProjectNote['type'] = 'ledger', extra?: Partial<ProjectNote>) => {
     if (!activeNotebookId) return;
@@ -144,16 +153,18 @@ function AppContent() {
         />
       )}
       <main className="flex-1 w-full overflow-y-auto relative pb-28 md:pb-0">
-        <div className={`mx-auto w-full h-full relative ${isShelf ? '' : 'max-w-[1600px] px-4 py-4'}`}>
+        <div className={`mx-auto w-full h-full relative ${isShelf ? '' : 'max-w-4xl px-4'}`}>
           {!isShelf && (
             <div className="h-full">
               {currentView === 'workspace' ? (
                 <WorkspaceView 
                   notebookId={activeNotebookId}
                   notes={activeNotes}
+                  notebooks={notebooks}
                   onAddNote={addNote}
                   onUpdateNote={updateNote}
                   onDeleteNote={deleteNote}
+                  onNavigateToNotebook={(id) => navigate(`/notebook/${id}/${id === 'general' ? 'ledger' : 'workspace'}`)}
                 />
               ) : currentView === 'ledger' ? (
                 <StenoPad 
@@ -162,13 +173,16 @@ function AppContent() {
                   onUpdateNote={updateNote}
                   onDeleteNote={deleteNote}
                   isNotebook={activeNotebookId === 'general'}
-                  allNotebookTitles={notebooks.map(nb => nb.title)}
+                  notebooks={notebooks}
+                  onNavigateToNotebook={(id) => navigate(`/notebook/${id}/${id === 'general' ? 'ledger' : 'workspace'}`)}
                   searchQuery={searchQuery}
                 />
               ) : currentView === 'research' ? (
                 <ResearchHub 
                   notes={activeNotes.filter(n => n.type === 'research')}
                   context={activeNotes.filter(n => n.type === 'ledger' || n.type === 'source').map(n => n.content).join('\n---\n')}
+                  notebooks={notebooks}
+                  onNavigateToNotebook={(id) => navigate(`/notebook/${id}/${id === 'general' ? 'ledger' : 'workspace'}`)}
                   onAddResearch={(q, a, u) => addNote(a, 'research', { question: q, metadata: { urls: u } })}
                   onPin={(note) => addNote(note.content, 'ledger', { title: note.question, metadata: note.metadata })}
                   onSendToArchitect={(content) => {

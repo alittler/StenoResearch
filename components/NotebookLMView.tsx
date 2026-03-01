@@ -11,9 +11,11 @@ interface NotebookLMViewProps {
   notebook: Notebook;
   notes: ProjectNote[];
   allNotes: ProjectNote[];
+  notebooks: Notebook[];
   onAddNote: (content: string, type: ProjectNote['type'], extra?: Partial<ProjectNote>) => void;
   onUpdateNote: (id: string, updates: Partial<ProjectNote>) => void;
   onDeleteNote: (id: string) => void;
+  onNavigateToNotebook?: (id: string) => void;
   searchQuery: string;
 }
 
@@ -21,9 +23,11 @@ const NotebookLMView: React.FC<NotebookLMViewProps> = ({
   notebook,
   notes,
   allNotes,
+  notebooks,
   onAddNote,
   onUpdateNote,
   onDeleteNote,
+  onNavigateToNotebook,
   searchQuery
 }) => {
   const [activeTab, setActiveTab] = useState<'chat' | 'notes'>('chat');
@@ -126,7 +130,8 @@ const NotebookLMView: React.FC<NotebookLMViewProps> = ({
                   onUpdateNote={onUpdateNote}
                   onDeleteNote={onDeleteNote}
                   isNotebook={false}
-                  allNotebookTitles={[]}
+                  notebooks={notebooks}
+                  onNavigateToNotebook={onNavigateToNotebook}
                   searchQuery={searchQuery}
                 />
               </div>

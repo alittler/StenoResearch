@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { chatWithNotebook } from '../services/geminiService';
+import { ProjectNote, Notebook } from '../types';
 import { Search, Sparkles, Pin, Link as LinkIcon, Loader2, BookOpen, Scissors, Trash2 } from 'lucide-react';
 import Markdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -11,6 +12,8 @@ import remarkGfm from 'remark-gfm';
 interface ResearchHubProps {
   notes: any[];
   context: string;
+  notebooks?: Notebook[];
+  onNavigateToNotebook?: (id: string) => void;
   onAddResearch: (question: string, answer: string, urls: string[]) => void;
   onPin: (note: { content: string; question: string; metadata: any }) => void;
   onSendToArchitect: (content: string) => void;
@@ -20,6 +23,8 @@ interface ResearchHubProps {
 const ResearchHub: React.FC<ResearchHubProps> = ({ 
   notes, 
   context, 
+  notebooks = [],
+  onNavigateToNotebook,
   onAddResearch, 
   onPin,
   onSendToArchitect,
@@ -43,6 +48,19 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const processContent = (content: string) => {
+    if (!notebooks.length) return content;
+    let processed = content;
+    const sortedNotebooks = [...notebooks].sort((a, b) => b.title.length - a.title.length);
+    sortedNotebooks.forEach(nb => {
+      if (nb.id === 'general') return;
+      const tagTitle = nb.title.replace(/\s+/g, '_');
+      const tagRegex = new RegExp(`(?<!\\[)#${tagTitle}(?!\\])`, 'g');
+      processed = processed.replace(tagRegex, `[#${tagTitle}](notebook://${nb.id})`);
+    });
+    return processed;
   };
 
   return (
@@ -116,10 +134,24 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
                 rehypePlugins={[rehypeRaw]}
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline" />
+                  a: ({node, ...props}) => {
+                    const href = props.href || '';
+                    if (href.startsWith('notebook://')) {
+                      const id = href.replace('notebook://', '');
+                      return (
+                        <button 
+                          onClick={() => onNavigateToNotebook?.(id)}
+                          className="text-emerald-600 font-bold hover:underline"
+                        >
+                          {props.children}
+                        </button>
+                      );
+                    }
+                    return <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline" />;
+                  }
                 }}
               >
-                {note.content}
+                {processContent(note.content)}
               </Markdown>
             </div>
 

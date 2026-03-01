@@ -34,9 +34,10 @@ const Navigation: React.FC<NavigationProps> = ({
   return (
     <>
       {/* Top Navigation Bar */}
-      <div className="w-full bg-[#1a1a1a] border-b border-black z-50">
-        <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-4 md:gap-6">
+      <div className="px-4">
+        <div className="max-w-4xl mx-auto bg-[#1a1a1a] border-b border-black z-50">
+          <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+            <div className="flex items-center gap-4 md:gap-6">
             <button 
               onClick={onBackToShelf}
               className="flex items-center gap-2 text-stone-400 hover:text-white transition-colors group"
@@ -84,6 +85,7 @@ const Navigation: React.FC<NavigationProps> = ({
           )}
         </div>
       </div>
+    </div>
 
       {/* Mobile Bottom Navigation */}
       {!hideTabs && isMobile && (

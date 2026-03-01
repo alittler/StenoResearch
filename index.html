@@ -35,18 +35,27 @@
           background-image: 
             /* Subtle parchment noise */
             url("data:image/svg+xml,%3Csvg width='256' height='256' viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E"),
-            /* Vertical margin line */
-            linear-gradient(90deg, transparent 79px, rgba(239, 68, 68, 0.1) 79px, rgba(239, 68, 68, 0.1) 81px, transparent 81px),
+            /* Vertical margin line - centered on mobile, 80px on desktop */
+            linear-gradient(90deg, transparent calc(50% - 1px), rgba(239, 68, 68, 0.1) calc(50% - 1px), rgba(239, 68, 68, 0.1) calc(50% + 1px), transparent calc(50% + 1px)),
             /* Horizontal ruling lines - subtle like the image */
             linear-gradient(0deg, transparent 31px, rgba(0, 0, 0, 0.06) 31px, rgba(0, 0, 0, 0.06) 32px, transparent 32px);
           background-size: 256px 256px, 100% 100%, 100% 32px;
           background-attachment: local;
         }
 
+        @media (min-width: 640px) {
+          .paper-texture {
+            background-image: 
+              url("data:image/svg+xml,%3Csvg width='256' height='256' viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E"),
+              linear-gradient(90deg, transparent 79px, rgba(239, 68, 68, 0.1) 79px, rgba(239, 68, 68, 0.1) 81px, transparent 81px),
+              linear-gradient(0deg, transparent 31px, rgba(0, 0, 0, 0.06) 31px, rgba(0, 0, 0, 0.06) 32px, transparent 32px);
+          }
+        }
+
         /* Opaque Torn Paper Stub - With Holes to match image */
         .torn-paper-stack {
           position: absolute;
-          top: 8px; /* Positioned right below the binder edge (accounting for -mt-2) */
+          top: 0; /* Flush with the top of the container */
           left: 0;
           width: 100%; /* Size of the paper */
           z-index: 15; /* Between paper (10) and binder (20) */
@@ -61,27 +70,48 @@
         }
 
         .layer-1 { transform: translateY(0); z-index: 3; }
-        .layer-2 { transform: translateY(-4px) translateX(2px) rotate(0.2deg); z-index: 2; }
+        .layer-2 { transform: translateY(3px); z-index: 2; }
         .layer-3 { 
-          transform: translateY(-8px) translateX(-1px) rotate(-0.3deg); 
+          transform: translateY(6px); 
           z-index: 1; 
-          filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); /* Darker shadow for the stack */
+          filter: drop-shadow(0 10px 10px rgba(0,0,0,0.12)); /* Shadow on the bottom-most layer */
         }
 
         .torn-paper-edge {
-          height: 24px; /* Reduced further per request */
+          height: 24px;
           background-color: #f5f1e6;
           position: relative;
-          /* Organic, wavy torn edge matching the reference image */
+        }
+
+        /* Unique curves for each layer */
+        .layer-1 .torn-paper-edge {
           clip-path: polygon(
             0% 0%, 100% 0%, 100% 88%,
             98% 89%, 96% 87%, 94% 90%, 92% 88%, 90% 91%, 88% 89%, 86% 92%, 84% 90%, 82% 93%, 80% 91%, 78% 94%, 76% 92%, 74% 95%, 72% 93%, 70% 96%, 68% 94%, 66% 97%, 64% 95%, 62% 98%, 60% 96%, 58% 99%, 56% 97%, 54% 100%, 52% 98%, 50% 99%, 48% 97%, 46% 98%, 44% 96%, 42% 97%, 40% 95%, 38% 96%, 36% 94%, 34% 95%, 32% 93%, 30% 94%, 28% 92%, 26% 93%, 24% 91%, 22% 92%, 20% 90%, 18% 91%, 16% 89%, 14% 90%, 12% 88%, 10% 89%, 8% 87%, 6% 88%, 4% 86%, 2% 87%, 0% 85%
           );
+        }
+
+        .layer-2 .torn-paper-edge {
+          clip-path: polygon(
+            0% 0%, 100% 0%, 100% 85%,
+            98% 87%, 95% 84%, 92% 89%, 89% 86%, 86% 91%, 83% 88%, 80% 93%, 77% 90%, 74% 95%, 71% 92%, 68% 97%, 65% 94%, 62% 99%, 59% 96%, 56% 100%, 53% 97%, 50% 99%, 47% 96%, 44% 98%, 41% 95%, 38% 97%, 35% 94%, 32% 96%, 29% 93%, 26% 95%, 23% 92%, 20% 94%, 17% 91%, 14% 93%, 11% 90%, 8% 92%, 5% 89%, 2% 91%, 0% 88%
+          );
+        }
+
+        .layer-3 .torn-paper-edge {
+          clip-path: polygon(
+            0% 0%, 100% 0%, 100% 82%,
+            97% 85%, 94% 82%, 91% 87%, 88% 84%, 85% 89%, 82% 86%, 79% 91%, 76% 88%, 73% 93%, 70% 90%, 67% 95%, 64% 92%, 61% 97%, 58% 94%, 55% 99%, 52% 96%, 49% 100%, 46% 97%, 43% 99%, 40% 96%, 37% 98%, 34% 95%, 31% 97%, 28% 94%, 25% 96%, 22% 93%, 19% 95%, 16% 92%, 13% 94%, 10% 91%, 7% 93%, 4% 90%, 1% 92%, 0% 89%
+          );
+        }
+
+        .torn-paper-edge {
           /* Ruling lines */
           background-image: 
             /* Noise and lines */
             url("data:image/svg+xml,%3Csvg width='256' height='256' viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E"),
-            linear-gradient(90deg, transparent 79px, rgba(239, 68, 68, 0.08) 79px, rgba(239, 68, 68, 0.08) 81px, transparent 81px),
+            /* Vertical margin line - centered on mobile, 80px on desktop */
+            linear-gradient(90deg, transparent calc(50% - 1px), rgba(239, 68, 68, 0.08) calc(50% - 1px), rgba(239, 68, 68, 0.08) calc(50% + 1px), transparent calc(50% + 1px)),
             linear-gradient(0deg, transparent 31px, rgba(0, 0, 0, 0.05) 31px, rgba(0, 0, 0, 0.05) 32px, transparent 32px);
           background-size: 256px 256px, 100% 100%, 100% 32px;
           background-position: 0 0, 0 0, 0 0;
@@ -89,13 +119,22 @@
           background-attachment: local;
         }
 
-        /* Fibrous highlight overlay for the stub's torn edge */
+        @media (min-width: 640px) {
+          .torn-paper-edge {
+            background-image: 
+              url("data:image/svg+xml,%3Csvg width='256' height='256' viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E"),
+              linear-gradient(90deg, transparent 79px, rgba(239, 68, 68, 0.08) 79px, rgba(239, 68, 68, 0.08) 81px, transparent 81px),
+              linear-gradient(0deg, transparent 31px, rgba(0, 0, 0, 0.05) 31px, rgba(0, 0, 0, 0.05) 32px, transparent 32px);
+          }
+        }
+
+        /* Darkened, fibrous aged overlay for the stub's torn edge */
         .torn-paper-edge::after {
           content: '';
           position: absolute;
           inset: 0;
-          background-image: linear-gradient(to bottom, transparent 80%, rgba(255, 255, 255, 0.4) 92%, rgba(255, 255, 255, 0.8) 100%);
-          mix-blend-mode: overlay;
+          background-image: linear-gradient(to bottom, transparent 75%, rgba(68, 64, 60, 0.15) 88%, rgba(68, 64, 60, 0.4) 100%);
+          mix-blend-mode: multiply;
           pointer-events: none;
         }
 
