@@ -15,6 +15,7 @@ interface StenoPadProps {
   onNavigateToNotebook?: (id: string) => void;
   searchQuery?: string;
   noteType?: ProjectNote['type'];
+  onConvertToSource?: (note: ProjectNote) => void;
 }
 
 const StenoPad: React.FC<StenoPadProps> = ({ 
@@ -26,7 +27,8 @@ const StenoPad: React.FC<StenoPadProps> = ({
   notebooks = [],
   onNavigateToNotebook,
   searchQuery = '',
-  noteType = 'ledger'
+  noteType = 'ledger',
+  onConvertToSource
 }) => {
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isExpanded, setIsExpanded] = useState<Record<string, boolean>>({});
@@ -151,7 +153,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
   );
 
   return (
-    <div className="max-w-4xl mx-auto pb-20">
+    <div className="w-full h-full pb-20">
       {/* The "Torn Paper" Header Effect */}
       <div className="relative h-8 mb-[-1rem] z-10 pointer-events-none">
         <div className="torn-paper-stack">
@@ -161,9 +163,9 @@ const StenoPad: React.FC<StenoPadProps> = ({
         </div>
       </div>
 
-      <div className="paper-texture shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-stone-200 rounded-b-lg min-h-screen relative flex flex-col">
+      <div className="paper-texture shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-stone-200 rounded-b-lg min-h-full relative flex flex-col">
         {/* Input Area */}
-        <div className="p-8 md:pl-[92px] pt-12 relative border-b-2 border-stone-200/50">
+        <div className="p-8 md:pl-[92px] pt-12 relative">
           <form onSubmit={handleAdd} className="space-y-4 relative">
             <textarea
               value={newNoteContent}
@@ -194,6 +196,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
               </div>
             )}
           </form>
+          <div className="perforation absolute bottom-0 left-0"></div>
         </div>
 
         {/* Notes List */}
@@ -206,7 +209,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
             return (
               <div 
                 key={note.id} 
-                className="p-8 md:pl-[92px] relative group animate-fade-in border-b-2 border-stone-200/50 last:border-b-0"
+                className="p-8 md:pl-[92px] relative group animate-fade-in"
               >
                 <div className="flex items-center justify-between mb-6 pb-4">
                 <div className="flex items-center gap-3">
@@ -232,13 +235,6 @@ const StenoPad: React.FC<StenoPadProps> = ({
                     </div>
                   )}
                 </div>
-                {note.title && (
-                  <div className="flex-1 px-4">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                      {note.type === 'source' ? 'Source: ' : ''}{note.title}
-                    </span>
-                  </div>
-                )}
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                   {editingId === note.id ? (
                     <>
@@ -257,15 +253,26 @@ const StenoPad: React.FC<StenoPadProps> = ({
                     </>
                   ) : (
                     <>
+                      {onConvertToSource && (
+                        <button 
+                          onClick={() => onConvertToSource(note)}
+                          className="p-2 hover:bg-amber-50 text-stone-300 hover:text-amber-500 rounded-lg transition-all"
+                          title="Convert to Source"
+                        >
+                          <Book className="w-4 h-4" />
+                        </button>
+                      )}
                       <button 
                         onClick={() => startEditing(note)}
                         className="p-2 hover:bg-blue-50 text-stone-300 hover:text-blue-500 rounded-lg transition-all"
+                        title="Edit Note"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => onDeleteNote(note.id)}
                         className="p-2 hover:bg-red-50 text-stone-300 hover:text-red-500 rounded-lg transition-all"
+                        title="Delete Note"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -284,7 +291,7 @@ const StenoPad: React.FC<StenoPadProps> = ({
                 </div>
               ) : (
                 <>
-                  <div className={`prose-steno ${!isExpanded[note.id] ? 'line-clamp-6' : ''}`}>
+                  <div className={`prose-steno markdown-body ${!isExpanded[note.id] ? 'line-clamp-6' : ''}`}>
                     <Markdown 
                       rehypePlugins={[rehypeRaw]} 
                       remarkPlugins={[remarkGfm]}
@@ -310,6 +317,26 @@ const StenoPad: React.FC<StenoPadProps> = ({
                     </Markdown>
                   </div>
 
+                  {(note.title || note.category || (note.tags && note.tags.length > 0)) && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {note.title && (
+                        <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 bg-stone-100 px-2 py-1 rounded">
+                          #{note.title.replace(/\s+/g, '_')}
+                        </span>
+                      )}
+                      {note.category && (
+                        <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 bg-stone-100 px-2 py-1 rounded">
+                          #{note.category.replace(/\s+/g, '_')}
+                        </span>
+                      )}
+                      {note.tags?.map((tag, idx) => (
+                        <span key={idx} className="text-[10px] font-black uppercase tracking-widest text-stone-400 bg-stone-100 px-2 py-1 rounded">
+                          #{tag.replace(/\s+/g, '_')}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   {note.content.length > 300 && (
                     <button 
                       onClick={() => toggleExpand(note.id)}
@@ -323,6 +350,9 @@ const StenoPad: React.FC<StenoPadProps> = ({
                     </button>
                   )}
                 </>
+              )}
+              {index < filteredNotes.length - 1 && (
+                <div className="perforation absolute bottom-0 left-0"></div>
               )}
             </div>
           );

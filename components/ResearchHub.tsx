@@ -129,7 +129,7 @@ const ResearchHub: React.FC<ResearchHubProps> = ({
               </div>
             </div>
             
-            <div className="prose-steno">
+            <div className="prose-steno markdown-body">
               <Markdown 
                 rehypePlugins={[rehypeRaw]}
                 remarkPlugins={[remarkGfm]}

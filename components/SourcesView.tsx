@@ -1,9 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { ProjectNote } from '../types';
-import { FileText, Link as LinkIcon, Globe, Clock, Upload, X, File, Loader2 } from 'lucide-react';
+import { FileText, Link as LinkIcon, Globe, Clock, Upload, X, File, Loader2, Clipboard, Trash2 } from 'lucide-react';
 import * as pdfjs from 'pdfjs-dist';
 // @ts-ignore
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import Markdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -11,12 +14,16 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 interface SourcesViewProps {
   notes: ProjectNote[];
   onAddNote: (content: string, type: ProjectNote['type'], extra?: Partial<ProjectNote>) => void;
+  onDeleteNote: (id: string) => void;
   compact?: boolean;
 }
 
-const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote, compact }) => {
+const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote, onDeleteNote, compact }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isPasting, setIsPasting] = useState(false);
+  const [pastedText, setPastedText] = useState('');
+  const [pastedTitle, setPastedTitle] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sources = notes.filter(n => n.type === 'ledger' || n.type === 'research' || n.type === 'source' || (n.type === 'raw' && (n.metadata?.fileType === 'application/pdf' || n.metadata?.fileType?.startsWith('image/'))));
@@ -70,6 +77,23 @@ const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote, compact }) 
     }
   };
 
+  const handlePasteSubmit = () => {
+    if (!pastedText.trim()) return;
+    
+    onAddNote(pastedText.trim(), 'source', {
+      title: pastedTitle.trim() || 'Pasted Content',
+      metadata: {
+        fileName: pastedTitle.trim() || 'pasted-content.txt',
+        fileType: 'text/plain',
+        fileSize: new Blob([pastedText]).size
+      }
+    });
+    
+    setPastedText('');
+    setPastedTitle('');
+    setIsPasting(false);
+  };
+
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -78,78 +102,109 @@ const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote, compact }) 
   };
 
   return (
-    <div className={compact ? "space-y-4" : "max-w-6xl mx-auto space-y-8 pb-20"}>
-      {!compact ? (
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-black uppercase tracking-tighter">Source Directory</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">{sources.length} Total Sources</span>
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-all disabled:opacity-50"
-            >
-              {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-              Upload File
-            </button>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              onChange={(e) => {
-                const files = Array.from(e.target.files || []);
-                files.forEach(handleFile);
-              }}
-              multiple
-              accept="image/*,application/pdf,text/*,.md"
-            />
+    <div 
+      className={compact ? "relative min-h-[200px]" : "max-w-6xl mx-auto pb-20 relative min-h-[400px]"}
+      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsDragging(false);
+        }
+      }}
+      onDrop={onDrop}
+    >
+      {/* Drag Overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-50 bg-blue-50/90 backdrop-blur-sm border-2 border-dashed border-blue-500 rounded-3xl flex items-center justify-center">
+          <div className="text-center">
+            <Upload className="w-12 h-12 text-blue-500 mx-auto mb-4 animate-bounce" />
+            <h3 className="text-xl font-bold text-blue-900">Drop files to upload</h3>
           </div>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{sources.length} Sources</span>
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-stone-500 hover:text-stone-800 transition-all disabled:opacity-50"
-          >
-            {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-            Upload
-          </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
-            onChange={(e) => {
-              const files = Array.from(e.target.files || []);
-              files.forEach(handleFile);
-            }}
-            multiple
-            accept="image/*,application/pdf,text/*,.md"
-          />
         </div>
       )}
 
-      {/* Dropzone */}
-      <div 
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={onDrop}
-        className={`
-          border-2 border-dashed flex flex-col items-center justify-center transition-all
-          ${compact ? 'p-6 rounded-2xl' : 'p-12 rounded-3xl'}
-          ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-stone-200 bg-white'}
-          ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-        `}
-      >
-        <div className={`${compact ? 'w-10 h-10 mb-2' : 'w-16 h-16 mb-4'} rounded-2xl bg-stone-50 flex items-center justify-center`}>
-          <Upload className={`${compact ? 'w-5 h-5' : 'w-8 h-8'} ${isDragging ? 'text-blue-500' : 'text-stone-400'}`} />
-        </div>
-        <h3 className={`${compact ? 'text-xs' : 'text-sm'} font-bold text-stone-800`}>Drag & Drop</h3>
-        {!compact && <p className="text-xs text-stone-500 mt-1">PDF, Images, Markdown, or Text files</p>}
-      </div>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        className="hidden" 
+        onChange={(e) => {
+          const files = Array.from(e.target.files || []);
+          files.forEach(handleFile);
+        }}
+        multiple
+        accept="image/*,application/pdf,text/*,.md"
+      />
 
-      <div className={`grid ${compact ? 'grid-cols-1 gap-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'}`}>
+      {/* Sticky Reveal Actions */}
+      {!isPasting && (
+        <div className="sticky top-0 z-20 flex justify-center group w-full h-0">
+          {/* Invisible hover target area at the top */}
+          <div className="absolute top-0 left-0 w-full h-12 bg-transparent z-30" /> 
+          
+          <div className="flex items-center gap-3 transform transition-transform duration-300 -translate-y-[calc(100%-8px)] group-hover:translate-y-0 bg-white/90 backdrop-blur-md px-4 py-2 rounded-b-2xl border-x border-b border-stone-200 shadow-md">
+            {isUploading && (
+              <Loader2 className="w-4 h-4 animate-spin text-stone-400" />
+            )}
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="bg-stone-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-800 transition-all disabled:opacity-50 flex items-center gap-2"
+            >
+              <Upload className="w-3 h-3" />
+              Browse Files
+            </button>
+            <button 
+              onClick={() => setIsPasting(true)}
+              disabled={isUploading}
+              className="bg-white border border-stone-200 text-stone-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-50 transition-all disabled:opacity-50 flex items-center gap-2"
+            >
+              <Clipboard className="w-3 h-3" />
+              Paste Text
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Paste Area */}
+      {isPasting && (
+        <div className="mt-4 bg-white border-2 border-stone-200 rounded-2xl p-6 space-y-4 animate-fade-in shadow-sm">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-stone-400">Source Title</label>
+            <input 
+              type="text"
+              value={pastedTitle}
+              onChange={(e) => setPastedTitle(e.target.value)}
+              placeholder="e.g., Interview Transcript, Meeting Notes..."
+              className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-stone-400">Content</label>
+            <textarea 
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              placeholder="Paste your text here..."
+              className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-4 text-sm min-h-[200px] focus:ring-2 focus:ring-stone-200 outline-none transition-all resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <button 
+              onClick={() => setIsPasting(false)}
+              className="px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-stone-400 hover:text-stone-600 transition-all"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handlePasteSubmit}
+              disabled={!pastedText.trim()}
+              className="bg-stone-900 text-white px-8 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-800 transition-all disabled:opacity-20 shadow-lg"
+            >
+              Add to Sources
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className={`mt-4 grid ${compact ? 'grid-cols-1 gap-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'}`}>
         {sources.map((source) => (
           <div key={source.id} className="bg-white border border-stone-200 rounded-2xl p-6 hover:shadow-md transition-all space-y-4">
             <div className="flex items-start justify-between">
@@ -162,14 +217,38 @@ const SourcesView: React.FC<SourcesViewProps> = ({ notes, onAddNote, compact }) 
                   <FileText className="w-5 h-5 text-stone-400" />
                 )}
               </div>
-              <span className="text-[10px] font-bold text-stone-300 uppercase tracking-widest">
-                {new Date(source.timestamp).toLocaleDateString()}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-stone-300 uppercase tracking-widest">
+                  {new Date(source.timestamp).toLocaleDateString()}
+                </span>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm('Are you sure you want to delete this source?')) {
+                      onDeleteNote(source.id);
+                    }
+                  }}
+                  className="p-1.5 text-stone-200 hover:text-red-500 transition-colors"
+                  title="Delete Source"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
             
             <div className="space-y-2">
               <h3 className="text-sm font-bold text-stone-800 line-clamp-2">{source.title || 'Untitled Entry'}</h3>
-              <p className="text-xs text-stone-500 line-clamp-3 leading-relaxed">{source.content}</p>
+              <div className="text-xs text-stone-500 line-clamp-3 leading-relaxed markdown-body overflow-hidden">
+                <Markdown 
+                  rehypePlugins={[rehypeRaw]}
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline" />
+                  }}
+                >
+                  {source.content}
+                </Markdown>
+              </div>
               {source.metadata?.fileSize && (
                 <span className="text-[10px] text-stone-400 font-mono">
                   {(source.metadata.fileSize / 1024).toFixed(1)} KB

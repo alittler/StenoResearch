@@ -9,6 +9,7 @@ interface NavigationProps {
   activeView: AppView;
   onViewChange: (view: AppView) => void;
   activeNotebookTitle?: string;
+  activeNotebookColor?: string;
   onBackToShelf: () => void;
   hideTabs?: boolean;
   isMobile?: boolean;
@@ -18,17 +19,18 @@ const Navigation: React.FC<NavigationProps> = ({
   activeView,
   onViewChange,
   activeNotebookTitle,
+  activeNotebookColor,
   onBackToShelf,
   hideTabs = false,
   isMobile = false
 }) => {
-  const tabs: { id: AppView; label: string; color: string; icon: React.ReactNode }[] = [
-    { id: 'workspace', label: 'Workspace', color: 'bg-blue-500', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'ledger', label: 'Ledger', color: 'bg-emerald-500', icon: <BookOpen className="w-4 h-4" /> },
-    { id: 'sources', label: 'Sources', color: 'bg-amber-500', icon: <Library className="w-4 h-4" /> },
-    { id: 'chat', label: 'Chat', color: 'bg-indigo-500', icon: <MessageSquare className="w-4 h-4" /> },
-    { id: 'architect', label: 'Architect', color: 'bg-purple-500', icon: <PenTool className="w-4 h-4" /> },
-    { id: 'raw', label: 'Raw', color: 'bg-stone-500', icon: <FileText className="w-4 h-4" /> },
+  const tabs: { id: AppView; label: string; icon: React.ReactNode }[] = [
+    { id: 'workspace', label: 'Workspace', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'ledger', label: 'Ledger', icon: <BookOpen className="w-4 h-4" /> },
+    { id: 'sources', label: 'Sources', icon: <Library className="w-4 h-4" /> },
+    { id: 'chat', label: 'Chat', icon: <MessageSquare className="w-4 h-4" /> },
+    { id: 'architect', label: 'Architect', icon: <PenTool className="w-4 h-4" /> },
+    { id: 'raw', label: 'Raw', icon: <FileText className="w-4 h-4" /> },
   ];
 
   return (
@@ -59,25 +61,47 @@ const Navigation: React.FC<NavigationProps> = ({
 
           {/* Desktop Tabs */}
           {!hideTabs && !isMobile && (
-            <nav className="flex items-center gap-1 md:gap-1">
+            <nav className="flex items-center h-full">
               {tabs.map((tab) => {
                 const isMobileHidden = tab.id === 'workspace' || tab.id === 'architect' || tab.id === 'raw';
+                const isActive = activeView === tab.id;
+                
                 return (
                   <button
                     key={tab.id}
                     onClick={() => onViewChange(tab.id)}
                     className={`
                       ${isMobileHidden ? 'hidden md:flex' : 'flex'}
-                      items-center justify-center
-                      md:px-4 md:py-2 p-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all
-                      ${activeView === tab.id 
-                        ? `${tab.color} text-white shadow-lg` 
-                        : 'text-stone-500 hover:text-stone-300 hover:bg-white/5'}
+                      items-center justify-center h-full
+                      md:px-4 px-2 relative group transition-all
+                      ${isActive ? 'text-white' : 'text-stone-500 hover:text-stone-300'}
                     `}
                     title={tab.label}
                   >
-                    <span className="hidden md:inline">{tab.label}</span>
-                    <span className="md:hidden">{tab.icon}</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest relative z-10">
+                      {tab.label}
+                    </span>
+                    
+                    {/* Active Indicator Background */}
+                    {isActive && (
+                      <div 
+                        className="absolute inset-x-1 inset-y-2 rounded-lg opacity-20"
+                        style={{ backgroundColor: activeNotebookColor || '#3b82f6' }}
+                      />
+                    )}
+                    
+                    {/* Active Bottom Bar */}
+                    {isActive && (
+                      <div 
+                        className="absolute bottom-0 left-0 right-0 h-0.5"
+                        style={{ backgroundColor: activeNotebookColor || '#3b82f6' }}
+                      />
+                    )}
+
+                    {/* Hover Indicator */}
+                    {!isActive && (
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/0 group-hover:bg-white/10 transition-all" />
+                    )}
                   </button>
                 );
               })}
@@ -94,6 +118,7 @@ const Navigation: React.FC<NavigationProps> = ({
             {tabs.map((tab) => {
               const isMobileHidden = tab.id === 'workspace' || tab.id === 'architect' || tab.id === 'raw';
               if (isMobileHidden) return null;
+              const isActive = activeView === tab.id;
               
               return (
                 <button
@@ -101,19 +126,24 @@ const Navigation: React.FC<NavigationProps> = ({
                   onClick={() => onViewChange(tab.id)}
                   className={`
                     flex flex-col items-center justify-center w-full h-full gap-1
-                    transition-all
-                    ${activeView === tab.id 
-                      ? 'text-white' 
-                      : 'text-stone-500 hover:text-stone-300'}
+                    transition-all relative
+                    ${isActive ? 'text-white' : 'text-stone-500 hover:text-stone-300'}
                   `}
                 >
-                  <div className={`
-                    p-2 rounded-xl transition-all
-                    ${activeView === tab.id ? tab.color : 'bg-transparent'}
-                  `}>
+                  <div 
+                    className={`p-2 rounded-xl transition-all relative z-10`}
+                    style={isActive ? { backgroundColor: activeNotebookColor || '#3b82f6' } : {}}
+                  >
                     {tab.icon}
                   </div>
-                  <span className="text-[8px] font-black uppercase tracking-widest">{tab.label}</span>
+                  <span className="text-[8px] font-black uppercase tracking-widest relative z-10">{tab.label}</span>
+                  
+                  {isActive && (
+                    <div 
+                      className="absolute bottom-2 w-1 h-1 rounded-full"
+                      style={{ backgroundColor: activeNotebookColor || '#3b82f6' }}
+                    />
+                  )}
                 </button>
               );
             })}

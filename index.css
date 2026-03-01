@@ -28,3 +28,146 @@
   font-style: italic !important;
   color: #9ca3af !important;
 }
+
+.perforation {
+  height: 1px;
+  width: 100%;
+  background-image: radial-gradient(circle, #a8a29e 1.5px, transparent 1.5px);
+  background-size: 10px 100%;
+  background-repeat: repeat-x;
+  opacity: 0.6;
+}
+
+/* Markdown Rendering Styles */
+.markdown-body {
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+.markdown-body p {
+  margin-bottom: 1rem;
+}
+
+.markdown-body p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body strong, 
+.markdown-body b {
+  font-weight: 800 !important;
+  color: #000 !important;
+}
+
+.markdown-body em, 
+.markdown-body i {
+  font-style: italic;
+}
+
+.markdown-body h1, 
+.markdown-body h2, 
+.markdown-body h3, 
+.markdown-body h4 {
+  font-weight: 800;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+.markdown-body h1 { font-size: 1.25rem; }
+.markdown-body h2 { font-size: 1.1rem; }
+.markdown-body h3 { font-size: 1rem; }
+.markdown-body h4 { font-size: 0.875rem; }
+
+.markdown-body ul, 
+.markdown-body ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.markdown-body ul {
+  list-style-type: disc;
+}
+
+.markdown-body ol {
+  list-style-type: decimal;
+}
+
+.markdown-body li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1rem;
+  font-style: italic;
+  color: #6b7280;
+  margin: 1rem 0;
+}
+
+.markdown-body code {
+  font-family: var(--font-mono);
+  background-color: #f3f4f6;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.markdown-body pre {
+  background-color: #f3f4f6;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.markdown-body pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.markdown-body th, 
+.markdown-body td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.markdown-body th {
+  background-color: #f9fafb;
+  font-weight: 700;
+}
+
+/* Steno Pad Specific Markdown Styles */
+.prose-steno {
+  font-family: 'Crimson Pro', serif;
+  font-size: 1.25rem;
+  line-height: 1.75;
+  color: #1e293b;
+}
+
+.prose-steno.markdown-body strong,
+.prose-steno.markdown-body b {
+  font-weight: 800 !important;
+  color: #000 !important;
+  font-family: 'Inter', sans-serif; /* Use sans-serif for bold text to make it stand out */
+  font-style: normal;
+}
+
+.prose-steno.markdown-body h1,
+.prose-steno.markdown-body h2,
+.prose-steno.markdown-body h3 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+  font-style: normal;
+}

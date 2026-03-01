@@ -50,16 +50,12 @@ const WorkspaceView: React.FC<WorkspaceViewProps> = ({
     setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setIsChatLoading(true);
 
-    const notepadContext = notepadNotes
-      .map(n => `[NOTEPAD ENTRY: ${n.title || 'Note'}] ${n.content}`)
-      .join('\n\n');
-
     const sourcesContext = notes
       .filter(n => n.type === 'ledger' || n.type === 'research' || n.type === 'source')
       .map(n => `[SOURCE: ${n.title || 'Note'}] ${n.content}`)
       .join('\n\n');
     
-    const fullContext = `NOTEPAD CONTENT:\n${notepadContext}\n\nSOURCES:\n${sourcesContext}`;
+    const fullContext = `SOURCES:\n${sourcesContext}`;
 
     try {
       const response = await chatWithNotebook(userMsg, fullContext, chatMessages);
@@ -78,8 +74,32 @@ const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-100px)] gap-4 lg:gap-6 p-4 lg:p-6 animate-fade-in overflow-y-auto lg:overflow-hidden">
       
-      {/* Left Column (Assistant + Sources) */}
-      <div className="flex flex-col gap-4 lg:gap-6 w-full lg:w-2/3 lg:h-full shrink-0 lg:shrink">
+      {/* Left Column (Ledger) */}
+      <div className="flex flex-col bg-white rounded-3xl shadow-sm border border-stone-200 overflow-hidden h-[600px] lg:h-full w-full lg:w-2/3 shrink-0 lg:shrink lg:min-h-0">
+        <div className="p-4 border-b border-stone-100 bg-stone-50 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <PenTool className="w-4 h-4 text-emerald-500" />
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-stone-500">Persistent Notepad</h2>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto bg-white no-scrollbar">
+          <StenoPad 
+            notes={notepadNotes}
+            onAddNote={onAddNote}
+            onUpdateNote={onUpdateNote}
+            onDeleteNote={onDeleteNote}
+            noteType="raw"
+            notebooks={notebooks}
+            onNavigateToNotebook={onNavigateToNotebook}
+            onConvertToSource={(note) => {
+              onAddNote(note.content, 'source', { title: note.title || 'Ledger Note', metadata: note.metadata });
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Right Column (Assistant + Sources) */}
+      <div className="flex flex-col gap-4 lg:gap-6 w-full lg:w-1/3 lg:h-full shrink-0 lg:shrink">
         
         {/* Assistant (Top 2/3) */}
         <div className="flex flex-col bg-white rounded-3xl shadow-sm border border-stone-200 overflow-hidden h-[500px] lg:h-auto lg:flex-[2] lg:min-h-0 shrink-0 lg:shrink">
@@ -162,36 +182,16 @@ const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               <h2 className="text-[10px] font-black uppercase tracking-widest text-stone-500">Source Directory</h2>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-6 bg-stone-50/50 no-scrollbar">
+          <div className="flex-1 overflow-y-auto bg-stone-50/50 no-scrollbar relative">
             <SourcesView 
               notes={notes}
               onAddNote={onAddNote}
+              onDeleteNote={onDeleteNote}
               compact={true}
             />
           </div>
         </div>
 
-      </div>
-
-      {/* Right Column (Ledger) */}
-      <div className="flex flex-col bg-white rounded-3xl shadow-sm border border-stone-200 overflow-hidden h-[600px] lg:h-full w-full lg:w-1/3 shrink-0 lg:shrink lg:min-h-0">
-        <div className="p-4 border-b border-stone-100 bg-stone-50 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <PenTool className="w-4 h-4 text-emerald-500" />
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-stone-500">Persistent Notepad</h2>
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-6 bg-white no-scrollbar">
-          <StenoPad 
-            notes={notepadNotes}
-            onAddNote={onAddNote}
-            onUpdateNote={onUpdateNote}
-            onDeleteNote={onDeleteNote}
-            noteType="raw"
-            notebooks={notebooks}
-            onNavigateToNotebook={onNavigateToNotebook}
-          />
-        </div>
       </div>
 
     </div>

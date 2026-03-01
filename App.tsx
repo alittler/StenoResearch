@@ -147,13 +147,14 @@ function AppContent() {
           activeView={currentView}
           onViewChange={(v) => navigate(`/notebook/${activeNotebookId}/${v}`)}
           activeNotebookTitle={activeNotebook?.title}
+          activeNotebookColor={activeNotebook?.color}
           onBackToShelf={() => navigate('/')}
           hideTabs={false}
           isMobile={isMobile}
         />
       )}
       <main className="flex-1 w-full overflow-y-auto relative pb-28 md:pb-0">
-        <div className={`mx-auto w-full h-full relative ${isShelf ? '' : 'max-w-4xl px-4'}`}>
+        <div className={`mx-auto w-full h-full relative ${isShelf ? '' : currentView === 'workspace' ? 'px-4' : 'max-w-4xl px-4'}`}>
           {!isShelf && (
             <div className="h-full">
               {currentView === 'workspace' ? (
@@ -219,7 +220,7 @@ function AppContent() {
                   notebookTitle={activeNotebook?.title || 'Ledger'}
                 />
               ) : currentView === 'sources' ? (
-                <SourcesView notes={activeNotes} onAddNote={addNote} />
+                <SourcesView notes={activeNotes} onAddNote={addNote} onDeleteNote={deleteNote} />
               ) : currentView === 'chat' ? (
                 <ChatView context={activeNotes.filter(n => n.type === 'ledger' || n.type === 'source').map(n => n.content).join('\n---\n')} />
               ) : null}
